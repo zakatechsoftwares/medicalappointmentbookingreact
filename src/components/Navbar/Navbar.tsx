@@ -1,4 +1,14 @@
-<svg
+import "./Navbar.css";
+import { useNavigate } from "react-router-dom";
+
+function Navbar() {
+  const navigate = useNavigate();
+  return (
+    <nav>
+      <div className="nav__logo">
+        <a href="/">
+          StayHealthy
+          <svg
             xmlns="http://www.w3.org/2000/svg"
             height="26"
             width="26"
@@ -14,3 +24,33 @@
               </g>
             </g>
           </svg>
+        </a>
+        <span>.</span>
+      </div>
+      <div className="nav__icon">
+        <i className="fa fa-times fa fa-bars"></i>
+      </div>
+      <ul className="nav__links active">
+        <li className="link">
+          <a href="../Landing_Page/LandingPage.html">Home</a>
+        </li>
+        <li className="link">
+          <a href="#">Appointments</a>
+        </li>
+
+        <li className="link">
+          <button className="btn1" onClick={() => navigate("/sign_up")}>
+            Sign Up
+          </button>
+        </li>
+        <li className="link">
+          <button className="btn1" onClick={() => navigate("/login")}>
+            Login
+          </button>
+        </li>
+      </ul>
+    </nav>
+  );
+}
+
+export default Navbar;

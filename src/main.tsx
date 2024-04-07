@@ -1,10 +1,22 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
+import "bootstrap/dist/css/bootstrap.css";
+import React from "react";
+import ReactDOM from "react-dom/client";
+import Navbar from "./components/Navbar/Navbar.tsx";
+import LandingPag from "./components/Landing_Page/LandingPag.tsx";
+import Sign_Up from "./components/Sign_Up/Sign_Up.tsx";
+import Login from "./components/Login/Login.tsx";
+//import "./index.css";
+import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const router = createBrowserRouter([
+  { path: "/", element: <LandingPag /> },
+  { path: "/navbar", element: <Navbar /> },
+  { path: "/login", element: <Login /> },
+  { path: "/sign_up", element: <Sign_Up /> },
+]);
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+    <RouterProvider router={router} />
+  </React.StrictMode>
+);
