@@ -5,14 +5,14 @@ import { useNavigate } from "react-router-dom";
 function Navbar() {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState("");
-  //const [email, setEmail] = useState("");
+  //const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   useEffect(() => {
-    const storedname = sessionStorage.getItem("name");
+    const storedemail = sessionStorage.getItem("email");
 
-    if (storedname) {
+    if (storedemail) {
       setIsLoggedIn(true);
-      setUsername(storedname);
+      setEmail(storedemail);
     }
   }, []);
 
@@ -24,7 +24,7 @@ function Navbar() {
     // remove email phone
     localStorage.removeItem("doctorData");
     setIsLoggedIn(false);
-    setUsername("");
+    setEmail("");
 
     // Remove the reviewFormData from local storage
     for (let i = 0; i < localStorage.length; i++) {
@@ -66,7 +66,7 @@ function Navbar() {
       <div className="nav__icon">
         <i className="fa fa-times fa fa-bars"></i>
       </div>
-      Welcome {username}
+      {isLoggedIn && `Welcome  ${email}`}
       <ul className="nav__links active">
         <li className="link">
           <a href="../Landing_Page/LandingPage.html">Home</a>

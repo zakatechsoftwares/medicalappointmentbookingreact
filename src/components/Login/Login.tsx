@@ -1,71 +1,4 @@
-// import "./Login.css";
-
-// function Login() {
-//   return (
-//     <div className="container">
-//       <div className="login-grid">
-//         <div className="login-text">
-//           <h2>Login</h2>
-//         </div>
-//         <div className="login-text">
-//           Are you a new member?
-//           <span>
-//             <a href="../Sign_Up/Sign_Up.html" style={{ color: "#2190ff" }}>
-//               Sign Up Here
-//             </a>
-//           </span>
-//         </div>
-//         <br />
-//         <div className="login-form">
-//           <form>
-//             <div className="form-group">
-//               <label htmlFor="email">Email</label>
-//               <input
-//                 type="email"
-//                 name="email"
-//                 id="email"
-//                 className="form-control"
-//                 placeholder="Enter your email"
-//                 aria-describedby="helpId"
-//               />
-//             </div>
-//             <div className="form-group">
-//               <label htmlFor="password">Password</label>
-//               <input
-//                 type="password"
-//                 name="password"
-//                 id="password"
-//                 className="form-control"
-//                 placeholder="Enter your password"
-//                 aria-describedby="helpId"
-//               />
-//             </div>
-
-//             <div className="btn-group">
-//               <button
-//                 type="submit"
-//                 className="btn btn-primary mb-2 mr-1 waves-effect waves-light"
-//               >
-//                 Login
-//               </button>
-//               <button
-//                 type="reset"
-//                 className="btn btn-danger mb-2 waves-effect waves-light"
-//               >
-//                 Reset
-//               </button>
-//             </div>
-//             <br />
-//             <div className="login-text">Forgot Password?</div>
-//           </form>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default Login;
-
+import { useEffect } from "react";
 import "./Login.css";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
@@ -77,12 +10,15 @@ import FormControl from "react-bootstrap/FormControl";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as yup from "yup";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { API_URL } from "../../config";
 //import { ReactNode } from "react";
 
 function Login() {
+  const navigate = useNavigate();
   const schema = yup.object().shape({
     email: yup.string().email().required(),
-    password: yup.string().email().required(),
+    password: yup.string().required(),
   });
   interface valueType {
     email: string;
@@ -94,8 +30,36 @@ function Login() {
 
     password: "",
   };
-  const handleFormSubmit = (values: valueType) => {
-    console.log(values);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("auth-token")) {
+      navigate("/");
+    }
+  });
+  const login = async (values: valueType) => {
+    const res = await fetch(`${API_URL}/api/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(values),
+    });
+    const json = await res.json();
+    if (json.authtoken) {
+      sessionStorage.setItem("auth-token", json.authtoken);
+
+      sessionStorage.setItem("email", values.email);
+      navigate("/");
+      window.location.reload();
+    } else {
+      if (json.errors) {
+        for (const error of json.errors) {
+          alert(error.msg);
+        }
+      } else {
+        alert(json.error);
+      }
+    }
   };
 
   return (
@@ -111,7 +75,7 @@ function Login() {
 
           <Formik
             validationSchema={schema}
-            onSubmit={handleFormSubmit}
+            onSubmit={login}
             initialValues={initialValues}
           >
             {({ handleReset }) => {
