@@ -1,8 +1,44 @@
 import "./Navbar.css";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function Navbar() {
   const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [username, setUsername] = useState("");
+  //const [email, setEmail] = useState("");
+  useEffect(() => {
+    const storedname = sessionStorage.getItem("name");
+
+    if (storedname) {
+      setIsLoggedIn(true);
+      setUsername(storedname);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("auth-token");
+    sessionStorage.removeItem("name");
+    sessionStorage.removeItem("email");
+    sessionStorage.removeItem("phone");
+    // remove email phone
+    localStorage.removeItem("doctorData");
+    setIsLoggedIn(false);
+    setUsername("");
+
+    // Remove the reviewFormData from local storage
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("reviewFormData_")) {
+        localStorage.removeItem(key);
+      }
+    }
+    // setEmail("");
+    window.location.reload();
+  };
+  // const handleDropdown = () => {
+  //   setShowDropdown(!showDropdown);
+  // }
   return (
     <nav>
       <div className="nav__logo">
@@ -30,6 +66,7 @@ function Navbar() {
       <div className="nav__icon">
         <i className="fa fa-times fa fa-bars"></i>
       </div>
+      Welcome {username}
       <ul className="nav__links active">
         <li className="link">
           <a href="../Landing_Page/LandingPage.html">Home</a>
@@ -38,14 +75,25 @@ function Navbar() {
           <a href="#">Appointments</a>
         </li>
 
+        {isLoggedIn || (
+          <li className="link">
+            <button className="btn1" onClick={() => navigate("/sign_up")}>
+              Sign Up
+            </button>
+          </li>
+        )}
         <li className="link">
-          <button className="btn1" onClick={() => navigate("/sign_up")}>
-            Sign Up
-          </button>
-        </li>
-        <li className="link">
-          <button className="btn1" onClick={() => navigate("/login")}>
-            Login
+          <button
+            className="btn1"
+            onClick={() => {
+              if (isLoggedIn) {
+                handleLogout();
+              } else {
+                navigate("/login");
+              }
+            }}
+          >
+            {isLoggedIn ? "Logout" : "Login"}
           </button>
         </li>
       </ul>

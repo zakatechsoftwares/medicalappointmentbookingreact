@@ -52,7 +52,7 @@ router.post(
     body("password", "Password Should Be At Least 8 Characters.").isLength({
       min: 8,
     }),
-    body("phone", "Phone Number Should Be 10 Digits.").isLength({ min: 10 }),
+    body("phone", "Phone Number Should Be 11 Digits.").isLength({ min: 11 }),
   ],
   async (req, res) => {
     const error = validationResult(req);

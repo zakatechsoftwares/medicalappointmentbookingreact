@@ -1,4 +1,5 @@
 import "./Sign_Up.css";
+import { useState } from "react";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
@@ -9,16 +10,30 @@ import FormControl from "react-bootstrap/FormControl";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as yup from "yup";
 import { Link } from "react-router-dom";
+import { API_URL } from "../../config.tsx";
+import { useNavigate } from "react-router-dom";
 //import { ReactNode } from "react";
 
 function Sign_Up() {
+  const [showerr, setShowerr] = useState("");
+
+  const navigate = useNavigate();
   const schema = yup.object().shape({
     name: yup.string().required(),
-    email: yup.string().email().required(),
+    email: yup
+      .string()
+
+      .email()
+      .required(),
+    password: yup
+      .string()
+      .min(8, "Password must be at least 8 characters long")
+
+      .required(),
     phone: yup
       .string()
       .required()
-      .matches(/^\d{10}$/, "Phone number must be exactly 10 digits"),
+      .matches(/^\d{11}$/, "Phone number must be exactly 11 digits"),
   });
   interface valueType {
     name: string;
@@ -32,12 +47,39 @@ function Sign_Up() {
     phone: "",
     password: "",
   };
-  const handleFormSubmit = (values: valueType) => {
-    console.log(values);
+  const handleFormSubmit = async (values: valueType) => {
+    // API Call
+    const response = await fetch(`${API_URL}/api/auth/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(values),
+    });
+    const json = await response.json();
+    if (json.authtoken) {
+      sessionStorage.setItem("auth-token", json.authtoken);
+      sessionStorage.setItem("name", values.name);
+      // phone and email
+      sessionStorage.setItem("phone", values.phone);
+      sessionStorage.setItem("email", values.email);
+      // Redirect to home page
+      navigate("/"); //on directing to home page you need to give logic to change login and signup buttons with name of the user and logout button where you have implemented Navbar functionality
+      window.location.reload();
+    } else {
+      if (json.errors) {
+        for (const error of json.errors) {
+          setShowerr(error.msg);
+        }
+      } else {
+        setShowerr(json.error);
+      }
+    }
   };
 
   return (
     <Container fluid>
+      {showerr}
       <Row>
         <Col md={4}></Col>
         <Col md={4}>
