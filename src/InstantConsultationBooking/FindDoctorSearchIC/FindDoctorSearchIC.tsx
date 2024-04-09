@@ -26,7 +26,7 @@ const FindDoctorSearchIC = () => {
     window.location.reload();
   };
   return (
-    <div className="finddoctor">
+    <div className="finddoctor z-0">
       <center>
         <h1>Find a doctor and Consult instantly</h1>
         <div>
@@ -44,12 +44,12 @@ const FindDoctorSearchIC = () => {
             alignItems: "center",
           }}
         >
-          <div className="doctor-search-box">
+          <div className="doctor-search-box z-0">
             {/* <p>Perform a search to see the results.</p> */}
 
             <input
               type="text"
-              className="search-doctor-input-box"
+              className="search-doctor-input-box "
               placeholder="Search doctors, clinics, hospitals, etc."
               onFocus={() => setDoctorResultHidden(false)}
               onBlur={() => setDoctorResultHidden(true)}
@@ -70,7 +70,7 @@ const FindDoctorSearchIC = () => {
             >
               {specialities.map((speciality) => (
                 <div
-                  className="search-doctor-result-item"
+                  className="search-doctor-result-item z-0"
                   key={speciality}
                   onMouseDown={() => handleDoctorSelect(speciality)}
                 >
