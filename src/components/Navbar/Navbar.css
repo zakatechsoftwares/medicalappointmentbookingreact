@@ -1,6 +1,7 @@
 /** Header - Navbar */
 nav {
   padding: 1.5rem;
+
   position: fixed;
   top: 0%;
   left: 50%;
@@ -11,7 +12,7 @@ nav {
   justify-content: space-between;
   background-color: #fff;
 }
-.dropdown-menu {
+/* .dropdown-menu {
   position: absolute;
   top: 100%;
   left: 0;
@@ -22,7 +23,7 @@ nav {
   background-color: #fff;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   border-radius: 4px;
-}
+} */
 
 .welcome-user {
   position: relative;
@@ -33,7 +34,7 @@ nav {
   display: block;
 }
 
-.dropdown-menu li {
+/* .dropdown-menu li {
   display: block;
   width: 150px;
   padding: 5px;
@@ -47,7 +48,7 @@ nav {
 
 .dropdown-menu li a:hover {
   color: #2190ff;
-}
+} */
 .nav__logo {
   font-size: 2rem;
   font-weight: 600;
@@ -157,4 +158,40 @@ nav {
 .btn2:hover {
   background-color: #3685fb;
   color: white;
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-toggle {
+  background-color: #3498db;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+/* .dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: #fff;
+  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+ z-index: 1;
+} */
+
+.dropdown-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dropdown-menu ul li {
+  padding: 10px;
+}
+
+.dropdown-menu ul li:hover {
+  background-color: #f2f2f2;
 }

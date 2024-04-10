@@ -10,6 +10,9 @@ import { Provider } from "react-redux";
 import store from "./redux/store.tsx";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import Notification from "./components/Notification/notification.tsx";
+import Reviews from "./components/ReviewForm/Reviews.tsx";
+import ReviewForm from "./components/ReviewForm/ReviewForm.tsx";
+
 //import { Container } from "react-bootstrap";
 
 const router = createBrowserRouter([
@@ -18,6 +21,8 @@ const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
   { path: "/sign_up", element: <Sign_Up /> },
   { path: "/instant-consultation", element: <InstantConsultation /> },
+  { path: "/reviews", element: <Reviews /> },
+  { path: "/reviewform", element: <ReviewForm /> },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

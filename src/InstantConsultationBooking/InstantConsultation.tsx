@@ -57,22 +57,7 @@ const InstantConsultation = () => {
       })
       .catch((err) => console.log(err));
   };
-  // const handleSearch = (searchText:string) => {
-  //   if (searchText === "") {
-  //     setFilteredDoctors([]);
-  //     setIsSearched(false);
-  //   } else {
-  //     const filtered = doctors.filter((doctor:Doctor) =>
-  //       //
-  //       doctor.speciality.toLowerCase().includes(searchText.toLowerCase())
-  //     );
 
-  //     setFilteredDoctors(filtered);
-  //     setIsSearched(true);
-  //     window.location.reload();
-  //   }
-  // };
-  //const navigate = useNavigate();
   useEffect(
     () => {
       getDoctorsDetails();

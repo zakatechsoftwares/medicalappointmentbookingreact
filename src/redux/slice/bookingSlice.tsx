@@ -1,14 +1,6 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
+import { BookingType } from "../DataType/DataType";
 
-interface BookingType {
-  id: string;
-  name: string;
-  phoneNumber: string;
-  doctorName: string;
-  doctorSpeciality: string;
-  dateOfAppointment: string;
-  timeSlot: string;
-}
 const initialState: BookingType[] = [];
 
 const notificationSlice = createSlice({
