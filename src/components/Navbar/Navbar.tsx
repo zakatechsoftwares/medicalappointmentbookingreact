@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Popup from "reactjs-popup";
 import ProfileCard from "../ProfileCard/ProfileCard";
+import ReportsLayout from "../ReportsLayout/ReportsLayout";
 
 // import { useEffect, useState } from "react";
 // import { useNavigate } from "react-router-dom";
@@ -112,6 +113,29 @@ function BasicExample() {
                   onClose={() => setOpen(false)}
                 >
                   <ProfileCard />
+                </Popup>
+              </NavDropdown.Item>
+              <NavDropdown.Item className="p-0">
+                <Popup
+                  style={{ width: "100%" }}
+                  trigger={
+                    <Button
+                      className="m-0"
+                      style={{
+                        width: "100%",
+                        backgroundColor: "transparent",
+                        textAlign: "start",
+                        color: "black",
+                      }}
+                    >
+                      Your Reports
+                    </Button>
+                  }
+                  modal
+                  open={open}
+                  onClose={() => setOpen(false)}
+                >
+                  <ReportsLayout />
                 </Popup>
               </NavDropdown.Item>
             </NavDropdown>
