@@ -209,7 +209,7 @@ router.put(
     body("name", "Username should be at least 4 characters").isLength({
       min: 4,
     }),
-    body("phone", "Phone number should be 10 digits").isLength({ min: 10 }),
+    body("phone", "Phone number should be 10 digits").isLength({ min: 11 }),
   ],
   async (req, res) => {
     const errors = validationResult(req);
