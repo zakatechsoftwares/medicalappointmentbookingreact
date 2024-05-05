@@ -3,26 +3,26 @@ import "./InstantConsultation.css";
 import { useSearchParams } from "react-router-dom";
 import FindDoctorSearchIC from "./FindDoctorSearchIC/FindDoctorSearchIC";
 import DoctorCardIC from "./DoctorCardIC/DoctorCardIC";
-import { useSelector } from "react-redux";
+// import { useSelector } from "react-redux";
 
-interface BookingType {
-  id: string;
-  name: string;
+// interface BookingType {
+//   id: string;
+//   name: string;
 
-  doctorName: string;
-  doctorSpeciality: string;
-  dateOfAppointment: string;
-  timeSlot: string;
-}
-interface Booking {
-  booking: { bookings: BookingType[] };
-}
+//   doctorName: string;
+//   doctorSpeciality: string;
+//   dateOfAppointment: string;
+//   timeSlot: string;
+// }
+// interface Booking {
+//   booking: { bookings: BookingType[] };
+// }
 
 const InstantConsultation = () => {
   const [searchParams] = useSearchParams();
   // const [doctors, setDoctors] = useState([]);
-  const bookings = useSelector((state: Booking) => state.booking.bookings[0]);
-  console.log(bookings);
+  // const bookings = useSelector((state: Booking) => state.booking.bookings[0]);
+  // console.log(bookings);
   const [filteredDoctors, setFilteredDoctors] = useState([]);
   const [isSearched, setIsSearched] = useState(false);
   interface Doctor {

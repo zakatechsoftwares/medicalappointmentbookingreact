@@ -9,22 +9,25 @@ import { useState, useEffect } from "react";
 import Popup from "reactjs-popup";
 import ProfileCard from "../ProfileCard/ProfileCard";
 import ReportsLayout from "../ReportsLayout/ReportsLayout";
+import { UserContext } from "../Routes/ProtectedRoute";
+import { useContext } from "react";
 
 // import { useEffect, useState } from "react";
 // import { useNavigate } from "react-router-dom";
 
 function BasicExample() {
+  const user = useContext(UserContext);
+
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   //const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
+
   const [open, setOpen] = useState(false);
   useEffect(() => {
     const storedemail = sessionStorage.getItem("email");
 
     if (storedemail) {
       setIsLoggedIn(true);
-      setEmail(storedemail);
     }
   }, []);
 
@@ -36,7 +39,6 @@ function BasicExample() {
     // remove email phone
     localStorage.removeItem("doctorData");
     setIsLoggedIn(false);
-    setEmail("");
 
     // Remove the reviewFormData from local storage
     for (let i = 0; i < localStorage.length; i++) {
@@ -85,10 +87,10 @@ function BasicExample() {
         {/* </Navbar.Brand> */}
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
 
-        <Navbar.Collapse id="basic-navbar-nav">
+        <Navbar.Collapse id="basic-navbar-nav" className="z-n9">
           {isLoggedIn && (
             <NavDropdown
-              title={`Welcome ${email}`}
+              title={`Welcome ${user?.name}`}
               id="basic-nav-dropdown"
               className="ms-auto bg-body-tertiary p-0"
               style={{ backgroundColor: "white" }}
@@ -117,7 +119,7 @@ function BasicExample() {
               </NavDropdown.Item>
               <NavDropdown.Item className="p-0">
                 <Popup
-                  style={{ width: "100%" }}
+                  // style={{ width: "100%" }}
                   trigger={
                     <Button
                       className="m-0"
@@ -141,9 +143,15 @@ function BasicExample() {
             </NavDropdown>
           )}
           <Nav className="ms-auto justify-content-center align-items-center">
-            <Nav.Link href="#home">Home</Nav.Link>
-            <Nav.Link href="#link">Appointments</Nav.Link>
-            {isLoggedIn || (
+            <Nav.Link onClick={() => navigate("/")}>Home</Nav.Link>
+            <Nav.Link onClick={() => navigate("/instant-consultation")}>
+              Appointments
+            </Nav.Link>
+            {isLoggedIn ? (
+              <Nav.Link onClick={() => navigate("/instant-consultation")}>
+                WelcomeShit
+              </Nav.Link>
+            ) : (
               //   <Nav.Link>
               <Button
                 variant="outline-primary"
@@ -152,9 +160,8 @@ function BasicExample() {
               >
                 Register
               </Button>
-              //   </Nav.Link>
             )}
-            {/* <Nav.Link> */}
+
             <Button
               variant="outline-primary"
               className="mt-0 mx-0"

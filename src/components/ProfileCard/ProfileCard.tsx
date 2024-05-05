@@ -25,7 +25,6 @@ interface UserDetailType {
 function ProfileCard() {
   const [userDetails, setUserDetails] = useState<UserDetailType>();
   const [editMode, setEditMode] = useState(false);
-  console.log("editmode", editMode);
 
   const navigate = useNavigate();
   const schema = yup.object().shape({

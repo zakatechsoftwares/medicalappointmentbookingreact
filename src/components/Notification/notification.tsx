@@ -17,7 +17,7 @@ interface Booking {
 const Notification = () => {
   const bookings = useSelector((state: Booking) => state.booking.bookings);
   return (
-    <Container fluid className="position-fixed top-0">
+    <Container fluid className="position-fixed top-5 pt-5">
       {bookings.length > 0 &&
         bookings.map((booking, index) => (
           <Accordion defaultActiveKey="0" className="z-5" key={index}>

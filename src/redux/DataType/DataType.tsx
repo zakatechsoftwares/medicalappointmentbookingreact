@@ -40,3 +40,23 @@ export interface ReduxStoreStateType {
   reviews: ReviewReviewType;
   bookings: BookingType[];
 }
+
+//-------------------------Medical Report -----------------------
+export interface ReportDataType {
+  name: string;
+  email: string;
+  phoneNumber: string;
+  doctorName: string;
+  speciality: string;
+}
+
+//------------------------Protected Routr----------------------
+export interface UserType {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+}

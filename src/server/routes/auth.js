@@ -109,7 +109,7 @@ router.post(
       // console.log('my',theUser.name);
       // req.session.name=theUser.name
       req.session.email = req.body.email; // <-- Change req.body.username to req.body.name
-      console.log(req.session.email);
+
       // console.log(req.session.name);
       if (theUser) {
         let checkHash = await bcrypt.compare(
@@ -181,7 +181,8 @@ router.get("/user", async (req, res) => {
         .json({ error: "Email not found in the request headers" });
     }
 
-    const user = await UserSchema.findOne({ email });
+    const user = await UserSchema.findOne({ email: email });
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }

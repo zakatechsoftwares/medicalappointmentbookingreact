@@ -1,18 +1,23 @@
 import Container from "react-bootstrap/Container";
 import Table from "react-bootstrap/Table";
 import Button from "react-bootstrap/Button";
-import { useState, useEffect } from "react";
-import Popup from "reactjs-popup";
-import ReviewForm from "./ReviewForm";
-import { useSelector } from "react-redux";
-import { DoctorReviewType, DoctorType } from "../../redux/DataType/DataType";
-import { ReduxStoreStateType } from "../../redux/DataType/DataType";
+import { useState, useEffect, useContext } from "react";
+// import Popup from "reactjs-popup";
+// import ReviewForm from "./ReviewForm";
+//import { useSelector } from "react-redux";
+import { DoctorType } from "../../redux/DataType/DataType";
+//import { ReduxStoreStateType } from "../../redux/DataType/DataType";
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import PdfDownload from "./ReportPdfDownload";
+import { useNavigate } from "react-router-dom";
+import { UserContext } from "../Routes/ProtectedRoute";
+import { UserType } from "../../redux/DataType/DataType";
 
 function ReportsLayout() {
   const [doctors, setDoctors] = useState<DoctorType[]>([]);
-  const [open, setOpen] = useState(false);
-  const reviews = useSelector((state: ReduxStoreStateType) => state.reviews);
-  //console.log(reviews.reviews);
+  const user = useContext(UserContext) as UserType;
+
+  const navigate = useNavigate();
 
   const getDoctorsDetails = () => {
     fetch("https://api.npoint.io/9a5543d36f1460da2f63")
@@ -53,11 +58,42 @@ function ReportsLayout() {
               <td>{doctor.name}</td>
               <td> {doctor.speciality}</td>
               <td>
-                <Button style={{ width: "100%" }}>View Report</Button>
+                <Button
+                  className="w-50 mt-1"
+                  onClick={() =>
+                    navigate("/reportdisplay", {
+                      state: {
+                        doctorName: doctor.name,
+                        speciality: doctor.speciality,
+                        phoneNumber: user.phone,
+                        email: user.email,
+                        name: user.name,
+                      },
+                    })
+                  }
+                >
+                  View Report
+                </Button>
               </td>
 
               <td>
-                <Button style={{ width: "100%" }}>Download Report</Button>
+                <PDFDownloadLink
+                  document={
+                    <PdfDownload
+                      doctorName={doctor.name}
+                      speciality={doctor.speciality}
+                      phoneNumber={user.phone}
+                      email={user.email}
+                      name={user.name}
+                    />
+                  }
+                  fileName="fee_acceptance.pdf"
+                  className="btn text-bg-primary w-75 mt-1"
+                >
+                  {({ loading }) =>
+                    loading ? "Loading document..." : "Download report"
+                  }
+                </PDFDownloadLink>
               </td>
             </tr>
           ))}
