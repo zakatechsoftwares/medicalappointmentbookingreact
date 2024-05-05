@@ -1,13 +1,16 @@
 //const mongoose = require('mongoose');
 import mongoose from "mongoose";
-const mongoURI =
-  "mongodb+srv://zakatechsoftware:0UXADJxWxsEMSGgc@cluster0.up6m5c8.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"; //0UXADJxWxsEMSGgc //"mongodb://root:<your-password>@127.0.0.1:27017";
+import "dotenv/config";
+
+//const mongoURI = 0UXADJxWxsEMSGgc //"mongodb://root:<your-password>@127.0.0.1:27017";
 
 const connectToMongo = async (retryCount) => {
   const MAX_RETRIES = 3;
   const count = retryCount ?? 0;
   try {
-    await mongoose.connect(mongoURI, { dbName: "stayhealthybeta1" });
+    mongoose.connect(process.env.MONGO_URI, {
+      dbName: "stayhealthybeta1",
+    });
     console.info("Connected to Mongo Successfully");
 
     return;
