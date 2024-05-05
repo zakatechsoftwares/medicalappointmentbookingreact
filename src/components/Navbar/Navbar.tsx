@@ -145,7 +145,7 @@ function BasicExample() {
           <Nav className="ms-auto justify-content-center align-items-center">
             <Nav.Link onClick={() => navigate("/")}>Home</Nav.Link>
             <Nav.Link onClick={() => navigate("/instant-consultation")}>
-              Appointments
+              Appointment
             </Nav.Link>
             {isLoggedIn ? (
               <Nav.Link onClick={() => navigate("/instant-consultation")}>
