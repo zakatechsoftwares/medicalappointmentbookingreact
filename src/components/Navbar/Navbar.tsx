@@ -5,50 +5,19 @@ import Navbar from "react-bootstrap/Navbar";
 import NavDropdown from "react-bootstrap/NavDropdown";
 import Button from "react-bootstrap/Button";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Popup from "reactjs-popup";
 import ProfileCard from "../ProfileCard/ProfileCard";
-import ReportsLayout from "../ReportsLayout/ReportsLayout";
-import { UserContext } from "../Routes/ProtectedRoute";
-import { useContext } from "react";
+import { useAuth } from "../Routes/AuthHook";
 
-// import { useEffect, useState } from "react";
-// import { useNavigate } from "react-router-dom";
-
-function BasicExample() {
-  const user = useContext(UserContext);
-
+function AppNavbar() {
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  //const [username, setUsername] = useState("");
-
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const storedemail = sessionStorage.getItem("email");
-
-    if (storedemail) {
-      setIsLoggedIn(true);
-    }
-  }, []);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const handleLogout = () => {
-    sessionStorage.removeItem("auth-token");
-    sessionStorage.removeItem("name");
-    sessionStorage.removeItem("email");
-    sessionStorage.removeItem("phone");
-    // remove email phone
-    localStorage.removeItem("doctorData");
-    setIsLoggedIn(false);
-
-    // Remove the reviewFormData from local storage
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith("reviewFormData_")) {
-        localStorage.removeItem(key);
-      }
-    }
-    // setEmail("");
-    window.location.reload();
+    logout();
+    navigate("/");
   };
 
   return (
@@ -81,78 +50,35 @@ function BasicExample() {
           </a>
           <span>.</span>
         </div>
-        <div className="nav__icon">
-          <i className="fa fa-times fa fa-bars"></i>
-        </div>
         {/* </Navbar.Brand> */}
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
 
         <Navbar.Collapse id="basic-navbar-nav" className="z-n9">
-          {isLoggedIn && (
+          {user && (
             <NavDropdown
-              title={`Welcome ${user?.name}`}
+              title={`Welcome, ${user.name.split(" ")[0]}`}
               id="basic-nav-dropdown"
-              className="ms-auto bg-body-tertiary p-0"
-              style={{ backgroundColor: "white" }}
+              className="ms-auto p-0"
             >
-              <NavDropdown.Item className="p-0">
-                <Popup
-                  trigger={
-                    <Button
-                      className="m-0"
-                      style={{
-                        width: "100%",
-                        backgroundColor: "transparent",
-                        textAlign: "start",
-                        color: "black",
-                      }}
-                    >
-                      Your profile
-                    </Button>
-                  }
-                  modal
-                  open={open}
-                  onClose={() => setOpen(false)}
-                >
-                  <ProfileCard />
-                </Popup>
+              <NavDropdown.Item onClick={() => setProfileOpen(true)}>Your profile</NavDropdown.Item>
+              <NavDropdown.Item onClick={() => navigate("/appointments")}>
+                Your appointments
               </NavDropdown.Item>
-              <NavDropdown.Item className="p-0">
-                <Popup
-                  // style={{ width: "100%" }}
-                  trigger={
-                    <Button
-                      className="m-0"
-                      style={{
-                        width: "100%",
-                        backgroundColor: "transparent",
-                        textAlign: "start",
-                        color: "black",
-                      }}
-                    >
-                      Your Reports
-                    </Button>
-                  }
-                  modal
-                  open={open}
-                  onClose={() => setOpen(false)}
-                >
-                  <ReportsLayout />
-                </Popup>
-              </NavDropdown.Item>
+              <NavDropdown.Item onClick={() => navigate("/reportlayout")}>Your reports</NavDropdown.Item>
+              <NavDropdown.Item onClick={() => navigate("/reviews")}>Review doctors</NavDropdown.Item>
             </NavDropdown>
           )}
+          <Popup modal open={profileOpen} onClose={() => setProfileOpen(false)}>
+            <ProfileCard onDone={() => setProfileOpen(false)} />
+          </Popup>
           <Nav className="ms-auto justify-content-center align-items-center">
             <Nav.Link onClick={() => navigate("/")}>Home</Nav.Link>
             <Nav.Link onClick={() => navigate("/instant-consultation")}>
               Appointment
             </Nav.Link>
-            {isLoggedIn ? (
-              <Nav.Link onClick={() => navigate("/instant-consultation")}>
-                WelcomeShit
-              </Nav.Link>
+            {user ? (
+              <Nav.Link onClick={() => navigate("/appointments")}>My Appointments</Nav.Link>
             ) : (
-              //   <Nav.Link>
               <Button
                 variant="outline-primary"
                 className="mt-0 mx-0 "
@@ -165,17 +91,10 @@ function BasicExample() {
             <Button
               variant="outline-primary"
               className="mt-0 mx-0"
-              onClick={() => {
-                if (isLoggedIn) {
-                  handleLogout();
-                } else {
-                  navigate("/login");
-                }
-              }}
+              onClick={() => (user ? handleLogout() : navigate("/login"))}
             >
-              {isLoggedIn ? "Sign Out" : "Login"}
+              {user ? "Sign Out" : "Login"}
             </Button>
-            {/* </Nav.Link> */}
           </Nav>
         </Navbar.Collapse>
       </Container>
@@ -183,4 +102,4 @@ function BasicExample() {
   );
 }
 
-export default BasicExample;
+export default AppNavbar;

@@ -1,7 +1,5 @@
-import {
-  //ChangeEvent,
-  useState,
-} from "react";
+import { useState } from "react";
+import Alert from "react-bootstrap/Alert";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
@@ -12,21 +10,15 @@ import FormControl from "react-bootstrap/FormControl";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as yup from "yup";
 
-import { API_URL } from "../../config.tsx";
-import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
-//import { ReactNode } from "react";
-interface UserDetailType {
-  name: string;
-  email: string;
-  phone: string;
-}
+import { useAuth } from "../Routes/AuthHook";
+import { errorMessage } from "../../api";
 
-function ProfileCard() {
-  const [userDetails, setUserDetails] = useState<UserDetailType>();
+function ProfileCard({ onDone }: { onDone?: () => void }) {
+  const { user: userDetails, updateProfile } = useAuth();
   const [editMode, setEditMode] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
 
-  const navigate = useNavigate();
   const schema = yup.object().shape({
     name: yup
       .string()
@@ -41,7 +33,7 @@ function ProfileCard() {
     phone: yup
       .string()
       .required()
-      .matches(/^\d{11}$/, "Phone number must be exactly 11 digits"),
+      .matches(/^(\+234\d{10}|0\d{10})$/, "Enter a valid Nigerian phone number, e.g. 08012345678"),
   });
   interface valueType {
     name: string;
@@ -53,84 +45,23 @@ function ProfileCard() {
     email: userDetails?.email || "",
     phone: userDetails?.phone || "",
   };
-  const fetchUserProfile = async () => {
-    try {
-      const authtoken = sessionStorage.getItem("auth-token");
-      const email = sessionStorage.getItem("email"); // Get the email from session storage
-      if (!authtoken) {
-        navigate("/login");
-      } else {
-        const response = await fetch(`${API_URL}/api/auth/user`, {
-          headers: {
-            Authorization: `Bearer ${authtoken}`,
-            Email: email || "", // Add the email to the headers
-          },
-        });
-        if (response.ok) {
-          const user = await response.json();
-          setUserDetails(user);
-          // setUpdatedDetails(user);
-        } else {
-          // Handle error case
-          throw new Error("Failed to fetch user profile");
-        }
-      }
-    } catch (error) {
-      console.error(error);
-      // Handle error case
-    }
-  };
-
   const handleEdit = () => {
+    setSaved(false);
     setEditMode(!editMode);
   };
 
   const handleSubmit = async (values: valueType) => {
+    setError("");
     try {
-      const authtoken = sessionStorage.getItem("auth-token");
-      const email = sessionStorage.getItem("email"); // Get the email from session storage
-
-      if (!authtoken || !email) {
-        navigate("/login");
-        return;
-      }
-      const payload = { name: values.name, phone: values.phone };
-      const response = await fetch(`${API_URL}/api/auth/user`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${authtoken}`,
-          "Content-Type": "application/json",
-          Email: email,
-        },
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        // Update the user details in session storage
-        sessionStorage.setItem("name", values.name);
-        sessionStorage.setItem("phone", values.phone);
-        setUserDetails(values);
-        setEditMode(false);
-        // Display success message to the user
-        alert(`Profile Updated Successfully!`);
-        navigate("/");
-      } else {
-        // Handle error case
-        throw new Error("Failed to update profile");
-      }
-    } catch (error) {
-      console.error(error);
-      // Handle error case
+      await updateProfile({ name: values.name, phone: values.phone });
+      setEditMode(false);
+      setSaved(true);
+    } catch (e) {
+      setError(errorMessage(e));
     }
   };
 
-  useEffect(() => {
-    const authtoken = sessionStorage.getItem("auth-token");
-    if (!authtoken) {
-      navigate("/login");
-    } else {
-      fetchUserProfile();
-    }
-  });
+  if (!userDetails) return null;
 
   return (
     <Container fluid>
@@ -142,6 +73,8 @@ function ProfileCard() {
             </div>
           </div>
 
+          {error && <Alert variant="danger">{error}</Alert>}
+          {saved && <Alert variant="success">Profile updated successfully</Alert>}
           {editMode ? (
             <Formik
               validationSchema={schema}
@@ -192,7 +125,10 @@ function ProfileCard() {
                     </FormGroup>
 
                     <Button variant="primary" type="submit">
-                      Submit edited
+                      Save changes
+                    </Button>{" "}
+                    <Button variant="secondary" type="button" onClick={handleEdit}>
+                      Cancel
                     </Button>
                     {/* <Button
                       variant="danger"
@@ -211,11 +147,15 @@ function ProfileCard() {
               <p>
                 <strong>Name:</strong> {userDetails?.name} <br />
                 <strong>Email:</strong> {userDetails?.email} <br />
-                <strong>Phone number:</strong>
-                {userDetails?.phone} <br />
+                <strong>Phone number:</strong> {userDetails?.phone} <br />
               </p>
 
-              <button onClick={handleEdit}>Edit</button>
+              <Button onClick={handleEdit}>Edit</Button>{" "}
+              {onDone && (
+                <Button variant="secondary" onClick={onDone}>
+                  Close
+                </Button>
+              )}
             </div>
           )}
         </Col>

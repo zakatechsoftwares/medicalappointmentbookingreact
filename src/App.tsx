@@ -1,35 +1,80 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Suspense, lazy } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 
-function App() {
-  const [count, setCount] = useState(0)
+import AuthProvider from "./components/Routes/AuthProvider.tsx";
+import ProtectedRoute from "./components/Routes/ProtectedRoute.tsx";
+import Layout from "./components/Layout/Layout.tsx";
+import LandingPag from "./components/Landing_Page/LandingPag.tsx";
+import Login from "./components/Login/Login.tsx";
+import Sign_Up from "./components/Sign_Up/Sign_Up.tsx";
+import InstantConsultation from "./InstantConsultationBooking/InstantConsultation.tsx";
+import MyAppointments from "./components/MyAppointments/MyAppointments.tsx";
+import Reviews from "./components/ReviewForm/Reviews.tsx";
+// The PDF library is large, so the report pages load only when opened
+const ReportsLayout = lazy(
+  () => import("./components/ReportsLayout/ReportsLayout.tsx"),
+);
+const PdfDisplay = lazy(
+  () => import("./components/ReportsLayout/ReportPdfDisplay.tsx"),
+);
 
+export default function App() {
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <Router>
+      <AuthProvider>
+        <Suspense fallback={<div className="p-5 text-center">Loading...</div>}>
+          <Routes>
+            <Route path="/" element={<LandingPag />} />
+            <Route element={<Layout />}>
+              {/* Anyone can browse doctors; booking asks them to log in */}
+              <Route
+                path="/instant-consultation"
+                element={<InstantConsultation />}
+              />
+              <Route path="/login" element={<Login />} />
+              <Route path="/sign_up" element={<Sign_Up />} />
+              <Route
+                path="/appointments"
+                element={
+                  <ProtectedRoute>
+                    <MyAppointments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reviews"
+                element={
+                  <ProtectedRoute>
+                    <Reviews />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reportlayout"
+                element={
+                  <ProtectedRoute>
+                    <ReportsLayout />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reportdisplay"
+                element={
+                  <ProtectedRoute>
+                    <PdfDisplay />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </AuthProvider>
+    </Router>
+  );
 }
-
-export default App

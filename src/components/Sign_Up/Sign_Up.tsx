@@ -1,5 +1,6 @@
 import "./Sign_Up.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Alert from "react-bootstrap/Alert";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
@@ -9,17 +10,16 @@ import FormLabel from "react-bootstrap/FormLabel";
 import FormControl from "react-bootstrap/FormControl";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as yup from "yup";
-import { Link } from "react-router-dom";
-import { API_URL } from "../../config.tsx";
-import { useNavigate } from "react-router-dom";
-//import { ReactNode } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../Routes/AuthHook";
+import { errorMessage } from "../../api";
 
 function Sign_Up() {
   const [showerr, setShowerr] = useState("");
 
   const navigate = useNavigate();
   const schema = yup.object().shape({
-    name: yup.string().required(),
+    name: yup.string().min(4, "Name should be at least 4 characters").required(),
     email: yup
       .string()
 
@@ -33,7 +33,7 @@ function Sign_Up() {
     phone: yup
       .string()
       .required()
-      .matches(/^\d{11}$/, "Phone number must be exactly 11 digits"),
+      .matches(/^(\+234\d{10}|0\d{10})$/, "Enter a valid Nigerian phone number, e.g. 08012345678"),
   });
   interface valueType {
     name: string;
@@ -47,39 +47,23 @@ function Sign_Up() {
     phone: "",
     password: "",
   };
+  const { user, register } = useAuth();
+
+  useEffect(() => {
+    if (user) navigate("/instant-consultation", { replace: true });
+  }, [user, navigate]);
+
   const handleFormSubmit = async (values: valueType) => {
-    // API Call
-    const response = await fetch(`${API_URL}/api/auth/register`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(values),
-    });
-    const json = await response.json();
-    if (json.authtoken) {
-      sessionStorage.setItem("auth-token", json.authtoken);
-      sessionStorage.setItem("name", values.name);
-      // phone and email
-      sessionStorage.setItem("phone", values.phone);
-      sessionStorage.setItem("email", values.email);
-      // Redirect to home page
-      navigate("/"); //on directing to home page you need to give logic to change login and signup buttons with name of the user and logout button where you have implemented Navbar functionality
-      window.location.reload();
-    } else {
-      if (json.errors) {
-        for (const error of json.errors) {
-          setShowerr(error.msg);
-        }
-      } else {
-        setShowerr(json.error);
-      }
+    setShowerr("");
+    try {
+      await register(values);
+    } catch (e) {
+      setShowerr(errorMessage(e));
     }
   };
 
   return (
     <Container fluid>
-      {showerr}
       <Row>
         <Col md={4}></Col>
         <Col md={4}>
@@ -94,9 +78,10 @@ function Sign_Up() {
             onSubmit={handleFormSubmit}
             initialValues={initialValues}
           >
-            {({ handleReset }) => {
+            {({ handleReset, isSubmitting }) => {
               return (
                 <Form>
+                  {showerr && <Alert variant="danger">{showerr}</Alert>}
                   <FormLabel>
                     Already a member{" "}
                     <Link to="/login" style={{ color: "#2190FF" }}>
@@ -145,13 +130,14 @@ function Sign_Up() {
                       placeholder="Enter your password"
                       style={{ width: "100%" }}
                     />
+                    <ErrorMessage name="password" />
                   </FormGroup>
                   <Button
                     variant="primary"
                     type="submit"
-                    // onClick={() => console.log(field)}
+                    disabled={isSubmitting}
                   >
-                    Submit
+                    {isSubmitting ? "Creating account..." : "Sign Up"}
                   </Button>
                   <Button
                     variant="danger"
@@ -172,80 +158,3 @@ function Sign_Up() {
 }
 
 export default Sign_Up;
-
-// import React from "react";
-// import { Formik, Form, Field, ErrorMessage } from "formik";
-// import {
-//   Container,
-//   Row,
-//   Col,
-//   Button,
-//   FormGroup,
-//   FormLabel,
-//   FormControl,
-// } from "react-bootstrap";
-
-// interface MyFormValues {
-//   firstName: string;
-// }
-
-// const initialValues: MyFormValues = {
-//   firstName: "",
-// };
-
-// const MyForm: React.FC = () => {
-//   const onSubmit = (values: MyFormValues) => {
-//     console.log(values);
-//     // Handle form submission logic here
-//   };
-
-//   const validate = (values: MyFormValues) => {
-//     const errors: Partial<MyFormValues> = {};
-//     if (!values.firstName) {
-//       errors.firstName = "Required";
-//     }
-//     return errors;
-//   };
-
-//   return (
-//     <Container>
-//       <Row>
-//         <Col md={{ span: 6, offset: 3 }}>
-//           <Formik
-//             initialValues={initialValues}
-//             onSubmit={onSubmit}
-//             validate={validate}
-//           >
-//             {() => (
-//               <Form>
-//                 <FormGroup>
-//                   <FormLabel>First Name</FormLabel>
-//                   <Field
-//                     type="text"
-//                     name="firstName"
-//                     placeholder="Enter your first name"
-//                     as={FormControl}
-//                   />
-//                   <ErrorMessage
-//                     name="firstName"
-//                     component="div"
-//                     className="text-danger"
-//                   />
-//                 </FormGroup>
-
-//                 <Button variant="primary" type="submit">
-//                   Submit
-//                 </Button>
-//                 <Button variant="primary" type="reset">
-//                   Submit
-//                 </Button>
-//               </Form>
-//             )}
-//           </Formik>
-//         </Col>
-//       </Row>
-//     </Container>
-//   );
-// };
-
-// export default MyForm;

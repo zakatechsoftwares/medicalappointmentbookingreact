@@ -1,43 +1,29 @@
-import { Container } from "react-bootstrap";
-import Accordion from "react-bootstrap/Accordion";
-import { useSelector } from "react-redux";
+import { useState } from "react";
+import Alert from "react-bootstrap/Alert";
+import { Link } from "react-router-dom";
+import { useAppSelector } from "../../redux/store";
+import { formatDate, formatTime } from "../../utils/format";
 
-interface BookingType {
-  id: string;
-  name: string;
-  phoneNumber: string;
-  doctorName: string;
-  doctorSpeciality: string;
-  dateOfAppointment: string;
-  timeSlot: string;
-}
-interface Booking {
-  booking: { bookings: BookingType[] };
-}
+/** A small banner showing the patient's next appointment. */
 const Notification = () => {
-  const bookings = useSelector((state: Booking) => state.booking.bookings);
+  const [dismissed, setDismissed] = useState<string | null>(null);
+  const next = useAppSelector((state) =>
+    state.booking.bookings.find((b) => b.status === "booked")
+  );
+
+  if (!next || dismissed === next.id) return null;
+
   return (
-    <Container fluid className="position-fixed top-5 pt-5">
-      {bookings.length > 0 &&
-        bookings.map((booking, index) => (
-          <Accordion defaultActiveKey="0" className="z-5" key={index}>
-            <Accordion.Item eventKey="0">
-              <Accordion.Header>
-                Appointment Details {bookings.length > 1 && index + 1}
-              </Accordion.Header>
-              <Accordion.Body>
-                <strong>Doctor:</strong> {booking.doctorName} <br />
-                <strong>Speciality:</strong> {booking.doctorSpeciality} <br />
-                <strong>Name:</strong> {booking.name} <br />
-                <strong>Phone number:</strong> {booking.phoneNumber} <br />
-                <strong>Date of Appointment:</strong>{" "}
-                {booking.dateOfAppointment} <br />
-                <strong>Time Slot:</strong> {booking.timeSlot} <br />
-              </Accordion.Body>
-            </Accordion.Item>
-          </Accordion>
-        ))}
-    </Container>
+    <Alert
+      variant="info"
+      dismissible
+      onClose={() => setDismissed(next.id)}
+      className="mx-3 mb-0"
+    >
+      <strong>Next appointment:</strong> {next.doctorName} ({next.doctorSpeciality}) on{" "}
+      {formatDate(next.date)} at {formatTime(next.timeSlot)}.{" "}
+      <Link to="/appointments">View all</Link>
+    </Alert>
   );
 };
 

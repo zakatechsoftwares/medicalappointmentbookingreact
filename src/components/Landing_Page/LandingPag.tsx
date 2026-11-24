@@ -1,4 +1,5 @@
 import "./LandingPage.css";
+import { Link } from "react-router-dom";
 import Navbar from "../Navbar/Navbar.tsx";
 
 function LandingPag() {
@@ -20,12 +21,12 @@ function LandingPag() {
               <div className="blue1 blob"></div>
             </div>
             <h4>
-              Lorem, ipsum dolor sit amet consectetur adipisicing elit. Eaque at
-              quae ducimus. Suscipit omnis quibusdam non cum rem voluptatem!
+              Find a trusted doctor, pick a time that suits you and book your
+              consultation in minutes, from the comfort of your home.
             </h4>
-            <a href="#services">
+            <Link to="/instant-consultation">
               <button className="button">Get Started</button>
-            </a>
+            </Link>
           </div>
         </div>
       </section>

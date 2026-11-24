@@ -1,42 +1,40 @@
 import Container from "react-bootstrap/Container";
 import Table from "react-bootstrap/Table";
 import Button from "react-bootstrap/Button";
-import { useState, useEffect, useContext } from "react";
-// import Popup from "reactjs-popup";
-// import ReviewForm from "./ReviewForm";
-//import { useSelector } from "react-redux";
-import { DoctorType } from "../../redux/DataType/DataType";
-//import { ReduxStoreStateType } from "../../redux/DataType/DataType";
+import { Link, useNavigate } from "react-router-dom";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import PdfDownload from "./ReportPdfDownload";
-import { useNavigate } from "react-router-dom";
-import { UserContext } from "../Routes/ProtectedRoute";
-import { UserType } from "../../redux/DataType/DataType";
+import { useAuth } from "../Routes/AuthHook";
+import { useAppSelector } from "../../redux/store";
 
+/** One report per doctor the patient has an appointment with. */
 function ReportsLayout() {
-  const [doctors, setDoctors] = useState<DoctorType[]>([]);
-  const user = useContext(UserContext) as UserType;
-
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const bookings = useAppSelector((s) => s.booking.bookings);
 
-  const getDoctorsDetails = () => {
-    fetch("https://api.npoint.io/9a5543d36f1460da2f63")
-      .then((res) => res.json())
-      .then((data) => {
-        setDoctors(data);
-      })
-      .catch((err) => console.log(err));
-  };
-
-  useEffect(
-    () => {
-      getDoctorsDetails();
-      // const authtoken = sessionStorage.getItem("auth-token");
-      // if (!authtoken) {
-      //     navigate("/login");
-      // }
-    } //, [searchParams]
+  // Unique doctors from the patient's (non-cancelled) appointments
+  const doctors = Array.from(
+    new Map(
+      bookings
+        .filter((b) => b.status !== "cancelled")
+        .map((b) => [b.doctorId, { id: b.doctorId, name: b.doctorName, speciality: b.doctorSpeciality }])
+    ).values()
   );
+
+  if (!user) return null;
+
+  if (doctors.length === 0) {
+    return (
+      <Container className="py-4">
+        <p className="fw-bold fs-3">Reports</p>
+        <p className="text-muted">
+          Reports appear here after you book an appointment.{" "}
+          <Link to="/instant-consultation">Find a doctor</Link>
+        </p>
+      </Container>
+    );
+  }
 
   return (
     <Container fluid>
@@ -52,8 +50,8 @@ function ReportsLayout() {
           </tr>
         </thead>
         <tbody>
-          {doctors.map((doctor: DoctorType, index) => (
-            <tr key={doctor.name}>
+          {doctors.map((doctor, index) => (
+            <tr key={doctor.id}>
               <td>{index + 1}</td>
               <td>{doctor.name}</td>
               <td> {doctor.speciality}</td>
@@ -87,7 +85,7 @@ function ReportsLayout() {
                       name={user.name}
                     />
                   }
-                  fileName="fee_acceptance.pdf"
+                  fileName={`report_${doctor.name.replace(/[^a-z0-9]+/gi, "_")}.pdf`}
                   className="btn text-bg-primary w-75 mt-1"
                 >
                   {({ loading }) =>

@@ -1,0 +1,30 @@
+import "dotenv/config";
+
+function required(name) {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(
+      `Missing required environment variable ${name}. Copy .env.example to .env and fill it in.`
+    );
+  }
+  return value;
+}
+
+const JWT_SECRET = required("JWT_SECRET");
+if (JWT_SECRET.length < 32) {
+  throw new Error("JWT_SECRET must be at least 32 characters long.");
+}
+
+export const config = {
+  port: Number(process.env.PORT) || 8181,
+  mongoUri: required("MONGO_URI"),
+  dbName: process.env.MONGO_DB_NAME || "stayhealthybeta1",
+  jwtSecret: JWT_SECRET,
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
+  // Comma-separated list of allowed frontend origins, e.g. "http://localhost:5173,https://stayhealthy.vercel.app"
+  clientOrigins: (process.env.CLIENT_ORIGIN || "http://localhost:5173")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean),
+  isProduction: process.env.NODE_ENV === "production",
+};

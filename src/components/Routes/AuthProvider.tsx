@@ -1,41 +1,72 @@
-import { PropsWithChildren, useState, useEffect } from "react";
-import { UserContext } from "./ProtectedRoute";
+import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from "react";
+import { api, setUnauthorizedHandler, tokenStore } from "../../api";
+import { UserType } from "../../redux/DataType/DataType";
+import { useAppDispatch } from "../../redux/store";
+import { clearBookings, fetchAppointments } from "../../redux/slice/bookingSlice";
+import { AuthContext, RegisterData } from "./AuthContext";
 
-// import { UserType } from "../../redux/DataType/DataType";
+interface AuthResponse {
+  authtoken: string;
+  user: UserType;
+}
 
-type AuthProviderProps = PropsWithChildren & {
-  isSignedIn?: boolean;
-};
+export default function AuthProvider({ children }: PropsWithChildren) {
+  const [user, setUser] = useState<UserType | null>(null);
+  const [loading, setLoading] = useState<boolean>(() => Boolean(tokenStore.get()));
+  const dispatch = useAppDispatch();
 
-export default function AuthProvider({
-  children,
-}: // isSignedIn,
-AuthProviderProps) {
-  const [user, setUser] = useState();
+  const logout = useCallback(() => {
+    tokenStore.clear();
+    setUser(null);
+    dispatch(clearBookings());
+  }, [dispatch]);
+
+  const startSession = useCallback(
+    (data: AuthResponse) => {
+      tokenStore.set(data.authtoken);
+      setUser(data.user);
+      dispatch(fetchAppointments());
+    },
+    [dispatch]
+  );
+
+  // On page load, restore the session from a saved token
   useEffect(() => {
-    const storedemail = sessionStorage.getItem("email") as string;
+    setUnauthorizedHandler(logout);
+    if (!tokenStore.get()) return;
+    api<UserType>("/api/auth/me")
+      .then((me) => {
+        setUser(me);
+        dispatch(fetchAppointments());
+      })
+      .catch(() => logout())
+      .finally(() => setLoading(false));
+  }, [dispatch, logout]);
 
-    fetch("http://localhost:8181/api/auth/user", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        email: storedemail, // Add the email to the headers
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        setUser(data); // Handle the response data here
-      })
-      .catch((error) => {
-        console.error("There was a problem with your fetch operation:", error);
-      });
+  const login = useCallback(
+    async (email: string, password: string) => {
+      startSession(
+        await api<AuthResponse>("/api/auth/login", { method: "POST", body: { email, password } })
+      );
+    },
+    [startSession]
+  );
+
+  const register = useCallback(
+    async (data: RegisterData) => {
+      startSession(await api<AuthResponse>("/api/auth/register", { method: "POST", body: data }));
+    },
+    [startSession]
+  );
+
+  const updateProfile = useCallback(async (data: { name: string; phone: string }) => {
+    setUser(await api<UserType>("/api/auth/me", { method: "PUT", body: data }));
   }, []);
-  // Uses `isSignedIn` prop to determine whether or not to render a user
 
-  return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
+  const value = useMemo(
+    () => ({ user, loading, login, register, logout, updateProfile }),
+    [user, loading, login, register, logout, updateProfile]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

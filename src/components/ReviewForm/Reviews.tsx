@@ -1,118 +1,107 @@
+import { useEffect, useMemo, useState } from "react";
 import Container from "react-bootstrap/Container";
 import Table from "react-bootstrap/Table";
 import Button from "react-bootstrap/Button";
-import { useState, useEffect } from "react";
+import Alert from "react-bootstrap/Alert";
+import Spinner from "react-bootstrap/Spinner";
+import { Link } from "react-router-dom";
 import Popup from "reactjs-popup";
 import ReviewForm from "./ReviewForm";
-import { useSelector } from "react-redux";
-import { DoctorReviewType, DoctorType } from "../../redux/DataType/DataType";
-import { ReduxStoreStateType } from "../../redux/DataType/DataType";
+import { api, errorMessage } from "../../api";
+import { useAppSelector } from "../../redux/store";
+import { DoctorType, ReviewType } from "../../redux/DataType/DataType";
 
+/** Lists the doctors the patient has booked, so they can rate them. */
 function Reviews() {
+  const bookings = useAppSelector((s) => s.booking.bookings);
   const [doctors, setDoctors] = useState<DoctorType[]>([]);
-  const [open, setOpen] = useState(false);
-  const reviews = useSelector((state: ReduxStoreStateType) => state.reviews);
-  //console.log(reviews.reviews);
+  const [myReviews, setMyReviews] = useState<ReviewType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [reviewing, setReviewing] = useState<DoctorType | null>(null);
 
-  const getDoctorsDetails = () => {
-    fetch("https://api.npoint.io/9a5543d36f1460da2f63")
-      .then((res) => res.json())
-      .then((data) => {
-        setDoctors(data);
-      })
-      .catch((err) => console.log(err));
-  };
-
-  useEffect(
-    () => {
-      getDoctorsDetails();
-      // const authtoken = sessionStorage.getItem("auth-token");
-      // if (!authtoken) {
-      //     navigate("/login");
-      // }
-    } //, [searchParams]
+  const bookedDoctorIds = useMemo(
+    () => new Set(bookings.filter((b) => b.status !== "cancelled").map((b) => b.doctorId)),
+    [bookings]
   );
 
+  useEffect(() => {
+    Promise.all([api<DoctorType[]>("/api/doctors"), api<ReviewType[]>("/api/reviews/mine")])
+      .then(([allDoctors, mine]) => {
+        setDoctors(allDoctors);
+        setMyReviews(mine);
+      })
+      .catch((e) => setError(errorMessage(e)))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const myDoctors = doctors.filter((d) => bookedDoctorIds.has(d.id));
+
+  const handleSaved = (review: ReviewType) => {
+    setMyReviews((list) => [...list.filter((r) => r.doctorId !== review.doctorId), review]);
+    setReviewing(null);
+  };
+
   return (
-    <Container fluid>
-      <p className="align-text-center fw-bold fs-3">Reviews</p>
-      <Table>
-        <thead>
-          <tr>
-            <th style={{ width: "20%" }}>Serial number</th>
-            <th style={{ width: "20%" }}>Doctor's Name</th>
-            <th style={{ width: "10%" }}>Speciality</th>
-            <th style={{ width: "20%" }}>Provide feedback</th>
-            <th style={{ width: "30%" }}>Review Given</th>
-          </tr>
-        </thead>
-        <tbody>
-          {doctors.map((doctor: DoctorType, index) => (
-            <tr key={doctor.name}>
-              <td>{index + 1}</td>
-              <td>{doctor.name}</td>
-              <td> {doctor.speciality}</td>
-              <td>
-                <Popup
-                  trigger={<Button style={{ width: "50%" }}>Review</Button>}
-                  modal
-                  open={open}
-                  onClose={() => setOpen(false)}
-                >
-                  <ReviewForm doctorName={doctor.name} />
-                </Popup>
-              </td>
-
-              <td>
-                {/* {reviews.reviews.length || <p>No reviews found</p>}
-                {reviews.reviews.length &&
-                  "THIS IS IT" &&
-                  reviews.reviews.map((doctorReview: DoctorReviewType) => {
-                    console.log("Checking doctor review:", doctorReview);
-                    console.log("Doctor name:", doctor.name);
-                    if (doctorReview.name === doctor.name) {
-                      console.log("Matching doctor found:", doctorReview.name);
-                      return (
-                        <div key={doctorReview.name}>
-                          {doctorReview.review.map((comment, commentIndex) => {
-                            console.log("Comment:", comment.comment);
-                            return (
-                              <p key={commentIndex}>
-                                This is the coment{comment.comment}
-                              </p>
-                            );
-                          })}
-                        </div>
-                      );
-                    }
-                    return null;
-                  })} */}
-
-                {reviews.reviews.length > 0 &&
-                  reviews.reviews.map((doctorReview: DoctorReviewType) => {
-                    if (doctorReview.name === doctor.name) {
-                      return (
-                        <div key={doctorReview.name}>
-                          {doctorReview.review.map((comment, commentIndex) => {
-                            return (
-                              <span key={commentIndex}>
-                                {" "}
-                                <strong>{comment.author}:</strong>{" "}
-                                {comment.comment} <br />
-                              </span>
-                            );
-                          })}
-                        </div>
-                      );
-                    } else {
-                      return <>No review yet</>;
-                    }
-                  })}
-              </td>
+    <Container className="py-4">
+      <h2>Reviews</h2>
+      {loading && <Spinner animation="border" />}
+      {error && <Alert variant="danger">{error}</Alert>}
+      {!loading && !error && myDoctors.length === 0 && (
+        <p className="text-muted">
+          You can review a doctor once you've booked an appointment with them.{" "}
+          <Link to="/instant-consultation">Find a doctor</Link>
+        </p>
+      )}
+      {myDoctors.length > 0 && (
+        <Table responsive>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Doctor's Name</th>
+              <th>Speciality</th>
+              <th>Your review</th>
+              <th></th>
             </tr>
-          ))}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody>
+            {myDoctors.map((doctor, index) => {
+              const mine = myReviews.find((r) => r.doctorId === doctor.id);
+              return (
+                <tr key={doctor.id}>
+                  <td>{index + 1}</td>
+                  <td>{doctor.name}</td>
+                  <td>{doctor.speciality}</td>
+                  <td>
+                    {mine ? (
+                      <>
+                        {"★".repeat(mine.rating)}
+                        {"☆".repeat(5 - mine.rating)} — {mine.comment}
+                      </>
+                    ) : (
+                      <span className="text-muted">No review yet</span>
+                    )}
+                  </td>
+                  <td>
+                    <Button size="sm" onClick={() => setReviewing(doctor)}>
+                      {mine ? "Edit" : "Review"}
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </Table>
+      )}
+      <Popup modal open={reviewing !== null} onClose={() => setReviewing(null)}>
+        {reviewing && (
+          <ReviewForm
+            doctor={reviewing}
+            existing={myReviews.find((r) => r.doctorId === reviewing.id)}
+            onSaved={handleSaved}
+          />
+        )}
+      </Popup>
     </Container>
   );
 }

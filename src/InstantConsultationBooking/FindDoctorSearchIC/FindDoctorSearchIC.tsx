@@ -1,29 +1,39 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./FindDoctorSearchIC.css";
-import {
-  useNavigate, //, Navigate
-} from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { api } from "../../api";
 
-const specialities = [
+// Used until the list loads from the server (or if it can't be reached)
+const FALLBACK_SPECIALITIES = [
   "Dentist",
   "Gynecologist/obstetrician",
   "General Physician",
   "Dermatologist",
   "Ear-nose-throat (ent) Specialist",
-  "Homeopath",
-  "Ayurveda",
+  "Paediatrician",
 ];
 
 const FindDoctorSearchIC = () => {
   const [doctorResultHidden, setDoctorResultHidden] = useState(true);
-  const [searchDoctor, setSearchDoctor] = useState("");
-  //  const [specialities, setSpecialities] = useState(initSpeciality);
+  const [searchParams] = useSearchParams();
+  const [searchDoctor, setSearchDoctor] = useState(searchParams.get("speciality") ?? "");
+  const [specialities, setSpecialities] = useState<string[]>(FALLBACK_SPECIALITIES);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    api<string[]>("/api/doctors/specialities")
+      .then((list) => list.length && setSpecialities(list))
+      .catch(() => {});
+  }, []);
+
+  // Filter the dropdown as the user types
+  const matches = specialities.filter((s) =>
+    s.toLowerCase().includes(searchDoctor.trim().toLowerCase())
+  );
   const handleDoctorSelect = (speciality: string) => {
     setSearchDoctor(speciality);
     setDoctorResultHidden(true);
-    navigate(`/instant-consultation?speciality=${speciality}`);
-    //  window.location.reload();
+    navigate(`/instant-consultation?speciality=${encodeURIComponent(speciality)}`);
   };
   return (
     <div className="finddoctor z-0">
@@ -50,7 +60,7 @@ const FindDoctorSearchIC = () => {
             <input
               type="text"
               className="search-doctor-input-box "
-              placeholder="Search doctors, clinics, hospitals, etc."
+              placeholder="Search by speciality, e.g. Dentist"
               onFocus={() => setDoctorResultHidden(false)}
               onBlur={() => setDoctorResultHidden(true)}
               value={searchDoctor}
@@ -60,7 +70,7 @@ const FindDoctorSearchIC = () => {
             <div className="findiconimg">
               <img
                 className="findIcon"
-                src={import.meta.env.PUBLIC_URL + "/images/search.svg"}
+                src={"/images/search.svg"}
                 alt=""
               />
             </div>
@@ -68,7 +78,7 @@ const FindDoctorSearchIC = () => {
               className="search-doctor-input-results"
               hidden={doctorResultHidden}
             >
-              {specialities.map((speciality) => (
+              {(matches.length ? matches : specialities).map((speciality) => (
                 <div
                   className="search-doctor-result-item z-0"
                   key={speciality}
@@ -76,7 +86,7 @@ const FindDoctorSearchIC = () => {
                 >
                   <span>
                     <img
-                      src={import.meta.env.PUBLIC_URL + "/images/search.svg"}
+                      src={"/images/search.svg"}
                       alt=""
                       style={{ height: "10px", width: "10px" }}
                       width="12"

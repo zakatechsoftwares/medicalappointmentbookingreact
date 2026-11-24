@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import Alert from "react-bootstrap/Alert";
 import "./Login.css";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
@@ -9,10 +10,9 @@ import FormLabel from "react-bootstrap/FormLabel";
 import FormControl from "react-bootstrap/FormControl";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as yup from "yup";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
-import { API_URL } from "../../config";
-//import { ReactNode } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../Routes/AuthHook";
+import { errorMessage } from "../../api";
 
 function Login() {
   const navigate = useNavigate();
@@ -31,34 +31,21 @@ function Login() {
     password: "",
   };
 
-  useEffect(() => {
-    if (sessionStorage.getItem("auth-token")) {
-      navigate("/");
-    }
-  });
-  const login = async (values: valueType) => {
-    const res = await fetch(`${API_URL}/api/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(values),
-    });
-    const json = await res.json();
-    if (json.authtoken) {
-      sessionStorage.setItem("auth-token", json.authtoken);
+  const { user, login } = useAuth();
+  const location = useLocation();
+  const [error, setError] = useState("");
+  const redirectTo = (location.state as { from?: string } | null)?.from || "/instant-consultation";
 
-      sessionStorage.setItem("email", values.email);
-      navigate("/");
-      window.location.reload();
-    } else {
-      if (json.errors) {
-        for (const error of json.errors) {
-          alert(error.msg);
-        }
-      } else {
-        alert(json.error);
-      }
+  useEffect(() => {
+    if (user) navigate(redirectTo, { replace: true });
+  }, [user, navigate, redirectTo]);
+
+  const handleLogin = async (values: valueType) => {
+    setError("");
+    try {
+      await login(values.email, values.password);
+    } catch (e) {
+      setError(errorMessage(e));
     }
   };
 
@@ -75,18 +62,15 @@ function Login() {
 
           <Formik
             validationSchema={schema}
-            onSubmit={login}
+            onSubmit={handleLogin}
             initialValues={initialValues}
           >
-            {({ handleReset }) => {
+            {({ handleReset, isSubmitting }) => {
               return (
                 <Form>
+                  {error && <Alert variant="danger">{error}</Alert>}
                   <FormLabel>
                     Do not have account?{" "}
-                    {/* <a href="../Login/Login.html" style={{ color: "#2190FF" }}>
-                      {" "}
-                      Register
-                    </a> */}
                     <Link to="/sign_up" style={{ color: "#2190FF" }}>
                       Register
                     </Link>
@@ -116,9 +100,9 @@ function Login() {
                   <Button
                     variant="primary"
                     type="submit"
-                    // onClick={() => console.log(field)}
+                    disabled={isSubmitting}
                   >
-                    Submit
+                    {isSubmitting ? "Logging in..." : "Login"}
                   </Button>
                   <Button
                     variant="danger"
