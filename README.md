@@ -3,7 +3,8 @@
 A web app for patients to find a doctor by speciality, pick a free date and time slot, and book a consultation from home. Patients can manage their appointments, rate the doctors they've seen and download a PDF report.
 
 - **Frontend:** React 18 + TypeScript (Vite), React Bootstrap, Redux Toolkit, Formik/Yup
-- **Backend:** Node.js + Express, MongoDB (Mongoose), JWT auth — in `src/server`
+- **Backend:** Node.js + Express, PostgreSQL (`pg`, plain SQL migrations), JWT auth — in `src/server`
+- **Database:** PostgreSQL on [Supabase](https://supabase.com). Tables live in a `booking` schema and are shaped like the Horama EMR's (UUID ids, first/last names, the same appointment statuses), so bookings can later flow into the EMR.
 
 ## Features
 
@@ -17,7 +18,7 @@ A web app for patients to find a doctor by speciality, pick a free date and time
 
 ## Getting started
 
-You need Node.js 18+ and a MongoDB database (a free [MongoDB Atlas](https://www.mongodb.com/atlas) cluster works).
+You need Node.js 18+ and a PostgreSQL database (a free [Supabase](https://supabase.com) project works, or Postgres on your machine).
 
 ```bash
 # 1. Install
@@ -26,10 +27,11 @@ cd src/server && npm install
 
 # 2. Configure the API
 cp .env.example .env
-# then edit .env: set MONGO_URI and a long random JWT_SECRET
+# then edit .env: set DATABASE_URL (and DIRECT_URL on Supabase) and a long random JWT_SECRET
 node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"   # makes a secret
 
-# 3. Add sample doctors (safe to run again)
+# 3. Create the tables, then add sample doctors (both safe to run again)
+npm run migrate
 npm run seed
 
 # 4. Start the API (http://localhost:8181)
@@ -45,10 +47,11 @@ API (`src/server/.env`) — see `src/server/.env.example`:
 
 | Variable | Required | Notes |
 | --- | --- | --- |
-| `MONGO_URI` | yes | MongoDB connection string |
+| `DATABASE_URL` | yes | Postgres URL the app uses. On Supabase, the transaction pooler (port 6543) |
+| `DIRECT_URL` | Supabase | Postgres URL for migrations and seeding. On Supabase, the session pooler (port 5432) |
 | `JWT_SECRET` | yes | At least 32 characters. The server refuses to start without it |
 | `CLIENT_ORIGIN` | no | Frontend URL(s) allowed by CORS, comma-separated. Default `http://localhost:5173` |
-| `MONGO_DB_NAME` | no | Default `stayhealthybeta1` |
+| `PGSSL` | no | Set to `disable` for a local Postgres without SSL |
 | `JWT_EXPIRES_IN` | no | Default `7d` |
 | `APP_TIMEZONE` | no | Decides "today" for bookings. Default `Africa/Lagos` |
 | `PORT` | no | Default `8181` |
@@ -80,6 +83,12 @@ Authenticated requests send `Authorization: Bearer <authtoken>`.
 cd src/server && npm test
 ```
 
+The full booking-flow tests need a throwaway Postgres database (they wipe the `booking` schema):
+
+```bash
+TEST_DATABASE_URL=postgresql://postgres@localhost:5432/stayhealthy_test PGSSL=disable npm test
+```
+
 ## Deploying
 
 - **One server:** run `npm run build` in `src/server` (builds the frontend into `dist/`), then `npm start`. Express serves both the API and the app.
@@ -87,4 +96,4 @@ cd src/server && npm test
 
 ### Vercel (frontend + API together)
 
-`vercel.json` builds the React app and runs the Express API as a serverless function (`api/index.js` → `src/server/serverless.js`). In the Vercel project, set `MONGO_URI` and `JWT_SECRET` (and optionally `MONGO_DB_NAME`). Leave `VITE_API_URL` unset so the app calls the API on the same domain. In MongoDB Atlas, allow access from anywhere (`0.0.0.0/0`), because Vercel functions don't have fixed IP addresses.
+`vercel.json` builds the React app and runs the Express API as a serverless function (`api/index.js` → `src/server/serverless.js`). Each build runs `npm run migrate` first, so new SQL files in `src/server/migrations` are applied automatically. In the Vercel project, set `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET` and `CLIENT_ORIGIN`. Leave `VITE_API_URL` unset so the app calls the API on the same domain. Functions run in Paris (`cdg1`), next to the Supabase database.

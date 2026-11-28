@@ -3,12 +3,13 @@ import Alert from "react-bootstrap/Alert";
 import { Link } from "react-router-dom";
 import { useAppSelector } from "../../redux/store";
 import { formatDate, formatTime } from "../../utils/format";
+import { isActiveBooking } from "../../redux/DataType/DataType";
 
 /** A small banner showing the patient's next appointment. */
 const Notification = () => {
   const [dismissed, setDismissed] = useState<string | null>(null);
   const next = useAppSelector((state) =>
-    state.booking.bookings.find((b) => b.status === "booked")
+    state.booking.bookings.find(isActiveBooking)
   );
 
   if (!next || dismissed === next.id) return null;

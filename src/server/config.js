@@ -17,8 +17,8 @@ if (JWT_SECRET.length < 32) {
 
 export const config = {
   port: Number(process.env.PORT) || 8181,
-  mongoUri: required("MONGO_URI"),
-  dbName: process.env.MONGO_DB_NAME || "stayhealthybeta1",
+  // Postgres connection string. On Supabase use the pooler URL (port 6543).
+  databaseUrl: required("DATABASE_URL"),
   jwtSecret: JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
   // Comma-separated list of allowed frontend origins, e.g. "http://localhost:5173,https://stayhealthy.vercel.app"

@@ -29,6 +29,7 @@ const AppointmentFormIC: React.FC<Props> = ({ doctor, onSubmit }) => {
   const [slots, setSlots] = useState<SlotsResponse | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [timeSlot, setTimeSlot] = useState("");
+  const [reason, setReason] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -54,7 +55,7 @@ const AppointmentFormIC: React.FC<Props> = ({ doctor, onSubmit }) => {
     setError("");
     setSubmitting(true);
     try {
-      await onSubmit({ doctorId: doctor.id, patientName: name, phoneNumber, date, timeSlot });
+      await onSubmit({ doctorId: doctor.id, patientName: name, phoneNumber, date, timeSlot, reason });
     } catch (err) {
       setError(errorMessage(err));
       // Refresh slots in case someone else just took this one
@@ -133,6 +134,17 @@ const AppointmentFormIC: React.FC<Props> = ({ doctor, onSubmit }) => {
             ))}
           </div>
         )}
+      </div>
+      <div className="form-group">
+        <label htmlFor="reason">Reason for visit (optional):</label>
+        <input
+          type="text"
+          id="reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          maxLength={300}
+          placeholder="e.g. Toothache, routine check-up"
+        />
       </div>
       <button type="submit" disabled={submitting || !timeSlot}>
         {submitting ? "Booking..." : "Book Now"}

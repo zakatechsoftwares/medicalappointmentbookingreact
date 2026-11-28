@@ -1,36 +1,47 @@
-// Adds sample doctors to the database. Safe to run more than once:
-// it only inserts doctors whose name isn't already there.
+// Adds sample doctors. Safe to run more than once: existing doctors are skipped.
 // Usage: npm run seed
-import mongoose from "mongoose";
-import { config } from "./config.js";
-import connectToMongo from "./db.js";
-import Doctor from "./models/Doctor.js";
+import "dotenv/config";
+import { getPool, closePool } from "./db.js";
 
+// [firstName, lastName, speciality, years of experience, fee (₦), working days (0 = Sun)]
 export const SAMPLE_DOCTORS = [
-  { name: "Dr. Adebayo Ogunleye", speciality: "Dentist", experience: 12, consultationFee: 10000 },
-  { name: "Dr. Chiamaka Eze", speciality: "Dentist", experience: 7, consultationFee: 8000, workingDays: [1, 3, 5, 6] },
-  { name: "Dr. Funmilayo Adeyemi", speciality: "Gynecologist/obstetrician", experience: 15, consultationFee: 15000 },
-  { name: "Dr. Ibrahim Musa", speciality: "Gynecologist/obstetrician", experience: 9, consultationFee: 12000 },
-  { name: "Dr. Oluwaseun Bakare", speciality: "General Physician", experience: 10, consultationFee: 7000, workingDays: [1, 2, 3, 4, 5, 6] },
-  { name: "Dr. Ngozi Okafor", speciality: "General Physician", experience: 5, consultationFee: 5000 },
-  { name: "Dr. Kehinde Alabi", speciality: "Dermatologist", experience: 8, consultationFee: 12000 },
-  { name: "Dr. Aisha Bello", speciality: "Dermatologist", experience: 11, consultationFee: 13000, workingDays: [2, 4, 6] },
-  { name: "Dr. Emeka Nwosu", speciality: "Ear-nose-throat (ent) Specialist", experience: 14, consultationFee: 14000 },
-  { name: "Dr. Halima Yusuf", speciality: "Ear-nose-throat (ent) Specialist", experience: 6, consultationFee: 9000 },
-  { name: "Dr. Tunde Akinola", speciality: "Paediatrician", experience: 13, consultationFee: 10000 },
-  { name: "Dr. Blessing Udo", speciality: "Paediatrician", experience: 4, consultationFee: 7000 },
+  ["Adebayo", "Ogunleye", "Dentist", 12, 10000],
+  ["Chiamaka", "Eze", "Dentist", 7, 8000, [1, 3, 5, 6]],
+  ["Funmilayo", "Adeyemi", "Gynecologist/obstetrician", 15, 15000],
+  ["Ibrahim", "Musa", "Gynecologist/obstetrician", 9, 12000],
+  ["Oluwaseun", "Bakare", "General Physician", 10, 7000, [1, 2, 3, 4, 5, 6]],
+  ["Ngozi", "Okafor", "General Physician", 5, 5000],
+  ["Kehinde", "Alabi", "Dermatologist", 8, 12000],
+  ["Aisha", "Bello", "Dermatologist", 11, 13000, [2, 4, 6]],
+  ["Emeka", "Nwosu", "Ear-nose-throat (ent) Specialist", 14, 14000],
+  ["Halima", "Yusuf", "Ear-nose-throat (ent) Specialist", 6, 9000],
+  ["Tunde", "Akinola", "Paediatrician", 13, 10000],
+  ["Blessing", "Udo", "Paediatrician", 4, 7000],
 ];
 
-export async function seedDoctors() {
-  const existing = new Set(await Doctor.distinct("name"));
-  const toInsert = SAMPLE_DOCTORS.filter((d) => !existing.has(d.name));
-  if (toInsert.length) await Doctor.insertMany(toInsert);
-  return toInsert.length;
+export async function seedDoctors(db) {
+  let added = 0;
+  for (const [firstName, lastName, speciality, experience, fee, days] of SAMPLE_DOCTORS) {
+    const { rowCount } = await db.query(
+      `INSERT INTO booking.doctors
+         ("firstName", "lastName", "speciality", "experience", "consultationFee", "workingDays")
+       VALUES ($1, $2, $3, $4, $5, COALESCE($6::smallint[], '{1,2,3,4,5}'))
+       ON CONFLICT ("title", "firstName", "lastName", "speciality") DO NOTHING`,
+      [firstName, lastName, speciality, experience, fee, days ?? null]
+    );
+    added += rowCount;
+  }
+  return added;
 }
 
 if (process.argv[1] && process.argv[1].endsWith("seed.js")) {
-  await connectToMongo(config.mongoUri, config.dbName);
-  const count = await seedDoctors();
-  console.log(`Added ${count} doctor(s).`);
-  await mongoose.disconnect();
+  const url = process.env.DIRECT_URL || process.env.DATABASE_URL;
+  try {
+    console.log(`Added ${await seedDoctors(getPool(url))} doctor(s).`);
+  } catch (error) {
+    console.error(error.message);
+    process.exitCode = 1;
+  } finally {
+    await closePool();
+  }
 }

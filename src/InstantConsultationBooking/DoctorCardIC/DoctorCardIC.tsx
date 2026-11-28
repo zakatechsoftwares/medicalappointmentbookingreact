@@ -8,7 +8,7 @@ import { formatDate, formatTime } from "../../utils/format";
 import { useAppDispatch, useAppSelector } from "../../redux/store";
 import { bookAppointment, cancelAppointment } from "../../redux/slice/bookingSlice";
 import { useAuth } from "../../components/Routes/AuthHook";
-import { DoctorType, NewBookingType } from "../../redux/DataType/DataType";
+import { DoctorType, NewBookingType, isActiveBooking } from "../../redux/DataType/DataType";
 
 const PersonIcon = () => (
   <svg
@@ -33,7 +33,7 @@ const DoctorCardIC: React.FC<{ doctor: DoctorType }> = ({ doctor }) => {
 
   // The patient's upcoming booking with this doctor, if any (comes from the server)
   const booking = useAppSelector((state) =>
-    state.booking.bookings.find((b) => b.doctorId === doctor.id && b.status === "booked")
+    state.booking.bookings.find((b) => b.doctorId === doctor.id && isActiveBooking(b))
   );
 
   const handleBook = async (data: NewBookingType) => {
@@ -108,10 +108,18 @@ const DoctorCardIC: React.FC<{ doctor: DoctorType }> = ({ doctor }) => {
 
             {booking ? (
               <>
-                <h3 style={{ textAlign: "center" }}>Appointment Booked!</h3>
+                <h3 style={{ textAlign: "center" }}>
+                  {booking.status === "confirmed" ? "Appointment Confirmed!" : "Appointment Booked!"}
+                </h3>
+                {booking.status === "pending" && (
+                  <p className="text-center text-muted small">
+                    The clinic will confirm your appointment shortly.
+                  </p>
+                )}
                 <div className="bookedInfo">
                   <p>Patient: {booking.patientName}</p>
                   <p>Phone Number: {booking.phoneNumber}</p>
+                  <p>Reason: {booking.reason}</p>
                   <p>
                     Date: {formatDate(booking.date)} at{" "}
                     {formatTime(booking.timeSlot)}

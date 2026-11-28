@@ -9,10 +9,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../redux/store";
 import { cancelAppointment, fetchAppointments } from "../../redux/slice/bookingSlice";
 import { formatDate, formatTime } from "../../utils/format";
-import { BookingType } from "../../redux/DataType/DataType";
+import { BookingType, isActiveBooking } from "../../redux/DataType/DataType";
 
 const STATUS_VARIANT: Record<BookingType["status"], string> = {
-  booked: "primary",
+  pending: "warning",
+  confirmed: "primary",
   cancelled: "secondary",
   completed: "success",
 };
@@ -37,8 +38,8 @@ function MyAppointments() {
     }
   };
 
-  const upcoming = bookings.filter((b) => b.status === "booked");
-  const past = bookings.filter((b) => b.status !== "booked").reverse();
+  const upcoming = bookings.filter(isActiveBooking);
+  const past = bookings.filter((b) => !isActiveBooking(b)).reverse();
 
   const renderTable = (list: BookingType[], allowCancel: boolean) => (
     <Table responsive hover>
@@ -49,6 +50,7 @@ function MyAppointments() {
           <th>Doctor</th>
           <th>Speciality</th>
           <th>Patient</th>
+          <th>Reason</th>
           <th>Status</th>
           {allowCancel && <th></th>}
         </tr>
@@ -61,6 +63,7 @@ function MyAppointments() {
             <td>{b.doctorName}</td>
             <td>{b.doctorSpeciality}</td>
             <td>{b.patientName}</td>
+            <td>{b.reason}</td>
             <td>
               <Badge bg={STATUS_VARIANT[b.status]}>{b.status}</Badge>
             </td>

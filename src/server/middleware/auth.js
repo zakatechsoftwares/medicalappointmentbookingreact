@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { isUuid } from "../utils/mappers.js";
 
 /**
  * Requires a valid "Authorization: Bearer <token>" header.
@@ -13,6 +14,7 @@ export function requireAuth(jwtSecret) {
     }
     try {
       const payload = jwt.verify(token, jwtSecret);
+      if (!isUuid(payload?.user?.id)) throw new Error("bad token payload");
       req.userId = payload.user.id;
       return next();
     } catch {

@@ -11,7 +11,8 @@ import reviewsRouter from "./routes/reviews.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export function createApp(config) {
+/** db: a pg Pool (or anything with .query and .connect) */
+export function createApp(config, db) {
   const app = express();
 
   app.disable("x-powered-by");
@@ -29,11 +30,18 @@ export function createApp(config) {
   );
   app.use(express.json({ limit: "100kb" }));
 
-  app.get("/api/health", (_req, res) => res.json({ ok: true }));
-  app.use("/api/auth", authRouter(config));
-  app.use("/api/doctors", doctorsRouter(config));
-  app.use("/api/appointments", appointmentsRouter(config));
-  app.use("/api/reviews", reviewsRouter(config));
+  app.get("/api/health", async (_req, res) => {
+    try {
+      await db.query("SELECT 1");
+      res.json({ ok: true, database: "up" });
+    } catch {
+      res.status(503).json({ ok: false, database: "down" });
+    }
+  });
+  app.use("/api/auth", authRouter(config, db));
+  app.use("/api/doctors", doctorsRouter(config, db));
+  app.use("/api/appointments", appointmentsRouter(config, db));
+  app.use("/api/reviews", reviewsRouter(config, db));
   app.use("/api", (_req, res) => res.status(404).json({ error: "Not found" }));
 
   // Serve the built React app (npm run build in the project root) with SPA fallback

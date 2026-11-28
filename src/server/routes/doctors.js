@@ -1,28 +1,30 @@
 import express from "express";
-import mongoose from "mongoose";
-import Doctor from "../models/Doctor.js";
-import Appointment from "../models/Appointment.js";
-import Review from "../models/Review.js";
 import { dayOfWeek, isPast, isValidDateString } from "../utils/time.js";
+import { isUuid, toPublicDoctor, toPublicReview } from "../utils/mappers.js";
 
-const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-export default function doctorsRouter() {
+export default function doctorsRouter(_config, db) {
   const router = express.Router();
 
   // GET /api/doctors?speciality=Dentist&search=ade
   router.get("/", async (req, res, next) => {
     try {
-      const filter = {};
+      const where = [`"isActive"`];
+      const params = [];
       if (typeof req.query.speciality === "string" && req.query.speciality) {
-        filter.speciality = new RegExp(`^${escapeRegex(req.query.speciality)}$`, "i");
+        params.push(req.query.speciality);
+        where.push(`lower("speciality") = lower($${params.length})`);
       }
       if (typeof req.query.search === "string" && req.query.search.trim()) {
-        const term = new RegExp(escapeRegex(req.query.search.trim()), "i");
-        filter.$or = [{ name: term }, { speciality: term }];
+        params.push(`%${req.query.search.trim().replace(/[%_\\]/g, "\\$&")}%`);
+        const p = `$${params.length}`;
+        where.push(`("firstName" ILIKE ${p} OR "lastName" ILIKE ${p} OR "speciality" ILIKE ${p})`);
       }
-      const doctors = await Doctor.find(filter).sort({ ratingAverage: -1, name: 1 });
-      return res.json(doctors.map((d) => d.toPublic()));
+      const { rows } = await db.query(
+        `SELECT * FROM booking.doctors WHERE ${where.join(" AND ")}
+         ORDER BY "ratingAverage" DESC, "lastName", "firstName"`,
+        params
+      );
+      return res.json(rows.map(toPublicDoctor));
     } catch (error) {
       return next(error);
     }
@@ -31,26 +33,31 @@ export default function doctorsRouter() {
   // GET /api/doctors/specialities
   router.get("/specialities", async (_req, res, next) => {
     try {
-      const list = await Doctor.distinct("speciality");
-      return res.json(list.sort());
+      const { rows } = await db.query(
+        `SELECT DISTINCT "speciality" FROM booking.doctors WHERE "isActive" ORDER BY 1`
+      );
+      return res.json(rows.map((r) => r.speciality));
     } catch (error) {
       return next(error);
     }
   });
 
-  router.param("id", (req, res, next, id) => {
-    if (!mongoose.isValidObjectId(id)) {
-      return res.status(404).json({ error: "Doctor not found" });
-    }
+  router.param("id", (_req, res, next, id) => {
+    if (!isUuid(id)) return res.status(404).json({ error: "Doctor not found" });
     return next();
   });
+
+  const findDoctor = async (id) => {
+    const { rows } = await db.query(`SELECT * FROM booking.doctors WHERE "id" = $1 AND "isActive"`, [id]);
+    return rows[0];
+  };
 
   // GET /api/doctors/:id
   router.get("/:id", async (req, res, next) => {
     try {
-      const doctor = await Doctor.findById(req.params.id);
+      const doctor = await findDoctor(req.params.id);
       if (!doctor) return res.status(404).json({ error: "Doctor not found" });
-      return res.json(doctor.toPublic());
+      return res.json(toPublicDoctor(doctor));
     } catch (error) {
       return next(error);
     }
@@ -63,13 +70,19 @@ export default function doctorsRouter() {
       if (typeof date !== "string" || !isValidDateString(date)) {
         return res.status(400).json({ error: "Pick a valid date" });
       }
-      const doctor = await Doctor.findById(req.params.id);
+      const doctor = await findDoctor(req.params.id);
       if (!doctor) return res.status(404).json({ error: "Doctor not found" });
 
       const works = doctor.workingDays.includes(dayOfWeek(date));
-      const taken = works
-        ? await Appointment.find({ doctor: doctor.id, date, status: "booked" }).distinct("timeSlot")
-        : [];
+      let taken = [];
+      if (works) {
+        const { rows } = await db.query(
+          `SELECT "timeSlot" FROM booking.appointments
+           WHERE "doctorId" = $1 AND "date" = $2 AND "status" IN ('PENDING', 'CONFIRMED')`,
+          [doctor.id, date]
+        );
+        taken = rows.map((r) => r.timeSlot);
+      }
 
       const slots = doctor.timeSlots.map((time) => ({
         time,
@@ -84,8 +97,11 @@ export default function doctorsRouter() {
   // GET /api/doctors/:id/reviews
   router.get("/:id/reviews", async (req, res, next) => {
     try {
-      const reviews = await Review.find({ doctor: req.params.id }).sort({ createdAt: -1 });
-      return res.json(reviews.map((r) => r.toPublic()));
+      const { rows } = await db.query(
+        `SELECT * FROM booking.reviews WHERE "doctorId" = $1 ORDER BY "createdAt" DESC`,
+        [req.params.id]
+      );
+      return res.json(rows.map(toPublicReview));
     } catch (error) {
       return next(error);
     }

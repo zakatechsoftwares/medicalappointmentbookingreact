@@ -33,7 +33,11 @@ export interface ReviewType {
 }
 
 // --------------------------- Appointments ---------------------------
-export type AppointmentStatus = "booked" | "cancelled" | "completed";
+// Same values as the EMR (lower-cased). "pending" = booked online, awaiting the clinic's confirmation.
+export type AppointmentStatus = "pending" | "confirmed" | "completed" | "cancelled";
+
+export const isActiveBooking = (b: { status: AppointmentStatus }) =>
+  b.status === "pending" || b.status === "confirmed";
 
 export interface BookingType {
   id: string;
@@ -45,6 +49,7 @@ export interface BookingType {
   date: string; // YYYY-MM-DD
   timeSlot: string; // HH:MM
   status: AppointmentStatus;
+  reason: string;
   createdAt: string;
 }
 
@@ -54,6 +59,7 @@ export interface NewBookingType {
   phoneNumber: string;
   date: string;
   timeSlot: string;
+  reason?: string;
 }
 
 // --------------------------- Medical report ---------------------------
