@@ -12,7 +12,30 @@
     <title>StayHealthy: book a doctor</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Shown until the app starts. If it never starts, the message explains what to do
+         instead of leaving a blank white page. -->
+    <div id="root">
+      <div id="boot" style="font-family: system-ui, sans-serif; color: #16302b; max-width: 32rem; margin: 18vh auto; padding: 0 1.25rem; text-align: center">
+        <p id="boot-msg">Loading StayHealthy…</p>
+      </div>
+    </div>
+    <noscript>
+      <p style="font-family: system-ui, sans-serif; text-align: center; padding: 1rem">
+        StayHealthy needs JavaScript. Please turn it on in your browser settings, or open this page in Chrome.
+      </p>
+    </noscript>
+    <script>
+      // If the app still hasn't started after 12 seconds (very old browser, blocked script,
+      // or an out-of-date copy of the page), say so and offer a reload.
+      setTimeout(function () {
+        var msg = document.getElementById("boot-msg");
+        if (!msg) return;
+        msg.innerHTML =
+          "The page is taking too long to load.<br><br>" +
+          '<button onclick="location.reload(true)" style="font: inherit; padding: 12px 20px; border: 0; border-radius: 10px; background: #1d7a55; color: #fff">Reload page</button>' +
+          "<br><br><small>If this keeps happening, update your browser or open the link in Chrome.</small>";
+      }, 12000);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
