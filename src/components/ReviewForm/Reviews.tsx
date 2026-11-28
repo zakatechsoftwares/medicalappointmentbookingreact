@@ -1,119 +1,111 @@
-import Container from "react-bootstrap/Container";
-import Table from "react-bootstrap/Table";
-import Button from "react-bootstrap/Button";
-import { useState, useEffect } from "react";
-import Popup from "reactjs-popup";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import ReviewForm from "./ReviewForm";
-import { useSelector } from "react-redux";
-import { DoctorReviewType, DoctorType } from "../../redux/DataType/DataType";
-import { ReduxStoreStateType } from "../../redux/DataType/DataType";
+import { api, errorMessage } from "../../api";
+import { useAppSelector } from "../../redux/store";
+import { DoctorType, ReviewType } from "../../redux/DataType/DataType";
+import DoctorAvatar from "../../ui/DoctorAvatar";
+import Sheet from "../../ui/Sheet";
 
+/** The doctors this patient has booked, each with their review or a button to write one. */
 function Reviews() {
+  const bookings = useAppSelector((s) => s.booking.bookings);
   const [doctors, setDoctors] = useState<DoctorType[]>([]);
-  const [open, setOpen] = useState(false);
-  const reviews = useSelector((state: ReduxStoreStateType) => state.reviews);
-  //console.log(reviews.reviews);
+  const [myReviews, setMyReviews] = useState<ReviewType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [reviewing, setReviewing] = useState<DoctorType | null>(null);
+  const [justSaved, setJustSaved] = useState("");
 
-  const getDoctorsDetails = () => {
-    fetch("https://api.npoint.io/9a5543d36f1460da2f63")
-      .then((res) => res.json())
-      .then((data) => {
-        setDoctors(data);
-      })
-      .catch((err) => console.log(err));
-  };
-
-  useEffect(
-    () => {
-      getDoctorsDetails();
-      // const authtoken = sessionStorage.getItem("auth-token");
-      // if (!authtoken) {
-      //     navigate("/login");
-      // }
-    } //, [searchParams]
+  const bookedDoctorIds = useMemo(
+    () => new Set(bookings.filter((b) => b.status !== "cancelled").map((b) => b.doctorId)),
+    [bookings]
   );
 
+  useEffect(() => {
+    Promise.all([api<DoctorType[]>("/api/doctors"), api<ReviewType[]>("/api/reviews/mine")])
+      .then(([allDoctors, mine]) => {
+        setDoctors(allDoctors);
+        setMyReviews(mine);
+      })
+      .catch((e) => setError(errorMessage(e)))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const myDoctors = doctors.filter((d) => bookedDoctorIds.has(d.id));
+
+  const handleSaved = (review: ReviewType) => {
+    setMyReviews((list) => [...list.filter((r) => r.doctorId !== review.doctorId), review]);
+    setJustSaved(review.doctorId);
+    setReviewing(null);
+  };
+
   return (
-    <Container fluid>
-      <p className="align-text-center fw-bold fs-3">Reviews</p>
-      <Table>
-        <thead>
-          <tr>
-            <th style={{ width: "20%" }}>Serial number</th>
-            <th style={{ width: "20%" }}>Doctor's Name</th>
-            <th style={{ width: "10%" }}>Speciality</th>
-            <th style={{ width: "20%" }}>Provide feedback</th>
-            <th style={{ width: "30%" }}>Review Given</th>
-          </tr>
-        </thead>
-        <tbody>
-          {doctors.map((doctor: DoctorType, index) => (
-            <tr key={doctor.name}>
-              <td>{index + 1}</td>
-              <td>{doctor.name}</td>
-              <td> {doctor.speciality}</td>
-              <td>
-                <Popup
-                  trigger={<Button style={{ width: "50%" }}>Review</Button>}
-                  modal
-                  open={open}
-                  onClose={() => setOpen(false)}
-                >
-                  <ReviewForm doctorName={doctor.name} />
-                </Popup>
-              </td>
+    <div className="page page-narrow">
+      <div className="page-head">
+        <h1>Reviews</h1>
+        <p>Rate the doctors you've seen. Honest reviews help other patients choose.</p>
+      </div>
 
-              <td>
-                {/* {reviews.reviews.length || <p>No reviews found</p>}
-                {reviews.reviews.length &&
-                  "THIS IS IT" &&
-                  reviews.reviews.map((doctorReview: DoctorReviewType) => {
-                    console.log("Checking doctor review:", doctorReview);
-                    console.log("Doctor name:", doctor.name);
-                    if (doctorReview.name === doctor.name) {
-                      console.log("Matching doctor found:", doctorReview.name);
-                      return (
-                        <div key={doctorReview.name}>
-                          {doctorReview.review.map((comment, commentIndex) => {
-                            console.log("Comment:", comment.comment);
-                            return (
-                              <p key={commentIndex}>
-                                This is the coment{comment.comment}
-                              </p>
-                            );
-                          })}
-                        </div>
-                      );
-                    }
-                    return null;
-                  })} */}
+      {loading && <div className="spinner" role="status" aria-label="Loading" />}
+      {error && <div className="notice notice-error">{error}</div>}
 
-                {reviews.reviews.length > 0 &&
-                  reviews.reviews.map((doctorReview: DoctorReviewType) => {
-                    if (doctorReview.name === doctor.name) {
-                      return (
-                        <div key={doctorReview.name}>
-                          {doctorReview.review.map((comment, commentIndex) => {
-                            return (
-                              <span key={commentIndex}>
-                                {" "}
-                                <strong>{comment.author}:</strong>{" "}
-                                {comment.comment} <br />
-                              </span>
-                            );
-                          })}
-                        </div>
-                      );
-                    } else {
-                      return <>No review yet</>;
-                    }
-                  })}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-    </Container>
+      {!loading && !error && myDoctors.length === 0 && (
+        <div className="panel empty">
+          <h2>Nothing to review yet</h2>
+          <p>You can review a doctor once you've booked a visit with them.</p>
+          <Link to="/instant-consultation" className="btn btn-primary">
+            Find a doctor
+          </Link>
+        </div>
+      )}
+
+      {myDoctors.length > 0 && (
+        <ul className="list panel">
+          {myDoctors.map((doctor) => {
+            const mine = myReviews.find((r) => r.doctorId === doctor.id);
+            return (
+              <li key={doctor.id} className="review-row">
+                <DoctorAvatar name={doctor.name} speciality={doctor.speciality} />
+                <div>
+                  <strong>{doctor.name}</strong>
+                  <p className="muted small">{doctor.speciality}</p>
+                  {mine ? (
+                    <p className="review-text">
+                      <span className="review-stars" aria-label={`${mine.rating} out of 5 stars`}>
+                        {"★".repeat(mine.rating)}
+                        <span aria-hidden="true" className="review-stars-off">
+                          {"★".repeat(5 - mine.rating)}
+                        </span>
+                      </span>
+                      {mine.comment}
+                    </p>
+                  ) : null}
+                  {justSaved === doctor.id && (
+                    <p className="small" role="status" style={{ color: "var(--leaf-deep)", fontWeight: 700 }}>
+                      Review saved.
+                    </p>
+                  )}
+                </div>
+                <button type="button" className={`btn btn-sm ${mine ? "btn-quiet" : "btn-primary"}`} onClick={() => setReviewing(doctor)}>
+                  {mine ? "Edit" : "Write a review"}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <Sheet open={reviewing !== null} title={reviewing ? "Review your visit" : ""} onClose={() => setReviewing(null)}>
+        {reviewing && (
+          <ReviewForm
+            doctor={reviewing}
+            existing={myReviews.find((r) => r.doctorId === reviewing.id)}
+            onSaved={handleSaved}
+          />
+        )}
+      </Sheet>
+    </div>
   );
 }
 

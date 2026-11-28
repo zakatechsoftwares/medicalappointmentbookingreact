@@ -6,7 +6,8 @@ import {
   StyleSheet,
   PDFViewer,
 } from "@react-pdf/renderer";
-import { useLocation } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
+import { ReportDataType } from "../../redux/DataType/DataType";
 
 // Create styles
 const styles = StyleSheet.create({
@@ -29,8 +30,9 @@ const styles = StyleSheet.create({
 
 // Create Document Component
 const PdfDisplay = () => {
-  const { state } = useLocation();
-  console.log(state.email);
+  const state = useLocation().state as ReportDataType | null;
+  // Opened directly (e.g. after a refresh) without report data: go back to the list
+  if (!state) return <Navigate to="/reportlayout" replace />;
 
   return (
     <PDFViewer style={{ width: "100vw", height: "100vh" }}>

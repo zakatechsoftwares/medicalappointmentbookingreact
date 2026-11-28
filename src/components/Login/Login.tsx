@@ -1,140 +1,88 @@
-import { useEffect } from "react";
-import "./Login.css";
-import Container from "react-bootstrap/Container";
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
-import Button from "react-bootstrap/Button";
-import FormGroup from "react-bootstrap/FormGroup";
-import FormLabel from "react-bootstrap/FormLabel";
-import FormControl from "react-bootstrap/FormControl";
-import { Formik, Form, Field, ErrorMessage } from "formik";
-import * as yup from "yup";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
-import { API_URL } from "../../config";
-//import { ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../Routes/AuthHook";
+import { errorMessage } from "../../api";
+import AuthLayout, { PasswordField, TextField } from "../Auth/AuthLayout";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function Login() {
   const navigate = useNavigate();
-  const schema = yup.object().shape({
-    email: yup.string().email().required(),
-    password: yup.string().required(),
-  });
-  interface valueType {
-    email: string;
+  const location = useLocation();
+  const { user, login } = useAuth();
+  const redirectTo = (location.state as { from?: string } | null)?.from || "/instant-consultation";
 
-    password: string;
-  }
-  const initialValues: valueType = {
-    email: "",
-
-    password: "",
-  };
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [touched, setTouched] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem("auth-token")) {
-      navigate("/");
-    }
-  });
-  const login = async (values: valueType) => {
-    const res = await fetch(`${API_URL}/api/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(values),
-    });
-    const json = await res.json();
-    if (json.authtoken) {
-      sessionStorage.setItem("auth-token", json.authtoken);
+    if (user) navigate(redirectTo, { replace: true });
+  }, [user, navigate, redirectTo]);
 
-      sessionStorage.setItem("email", values.email);
-      navigate("/");
-      window.location.reload();
-    } else {
-      if (json.errors) {
-        for (const error of json.errors) {
-          alert(error.msg);
-        }
-      } else {
-        alert(json.error);
-      }
+  const emailError = !EMAIL_RE.test(email.trim()) ? "Enter the email you signed up with" : "";
+  const passwordError = !password ? "Enter your password" : "";
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTouched(true);
+    if (emailError || passwordError) return;
+    setBusy(true);
+    setError("");
+    try {
+      await login(email.trim(), password);
+    } catch (err) {
+      setError(errorMessage(err));
+      setBusy(false);
     }
   };
 
   return (
-    <Container fluid>
-      <Row>
-        <Col md={4}></Col>
-        <Col md={4}>
-          <div className="signup-grid">
-            <div className="signup-text">
-              <h1>Login</h1>
-            </div>
+    <AuthLayout
+      title="Log in"
+      intro={
+        (location.state as { from?: string } | null)?.from
+          ? "Log in to finish booking your appointment."
+          : "Welcome back. Log in to book and manage your visits."
+      }
+    >
+      <form onSubmit={submit} noValidate>
+        {error && (
+          <div className="notice notice-error" role="alert">
+            {error}
           </div>
-
-          <Formik
-            validationSchema={schema}
-            onSubmit={login}
-            initialValues={initialValues}
-          >
-            {({ handleReset }) => {
-              return (
-                <Form>
-                  <FormLabel>
-                    Do not have account?{" "}
-                    {/* <a href="../Login/Login.html" style={{ color: "#2190FF" }}>
-                      {" "}
-                      Register
-                    </a> */}
-                    <Link to="/sign_up" style={{ color: "#2190FF" }}>
-                      Register
-                    </Link>
-                  </FormLabel>
-                  <FormGroup className="mb-3" controlId="formBasicEmail">
-                    <FormLabel className="fw-bold">Email address</FormLabel>
-                    <Field
-                      as={FormControl}
-                      name="email"
-                      type="email"
-                      placeholder="Enter your email"
-                      style={{ width: "100%" }}
-                    />
-                    <ErrorMessage name="email" />
-                  </FormGroup>
-                  <FormGroup className="mb-3" controlId="formBasicPassword">
-                    <FormLabel className="fw-bold">Password</FormLabel>
-                    <Field
-                      as={FormControl}
-                      name="password"
-                      type="password"
-                      placeholder="Enter your password"
-                      style={{ width: "100%" }}
-                    />
-                    <ErrorMessage name="password" />
-                  </FormGroup>
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    // onClick={() => console.log(field)}
-                  >
-                    Submit
-                  </Button>
-                  <Button
-                    variant="danger"
-                    type="button"
-                    onClick={() => handleReset()}
-                  >
-                    Reset
-                  </Button>{" "}
-                </Form>
-              );
-            }}
-          </Formik>
-        </Col>
-        <Col md={4}></Col>
-      </Row>
-    </Container>
+        )}
+        <TextField
+          id="login-email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          value={email}
+          onChange={setEmail}
+          error={touched ? emailError : ""}
+        />
+        <PasswordField
+          id="login-password"
+          label="Password"
+          autoComplete="current-password"
+          value={password}
+          onChange={setPassword}
+          error={touched ? passwordError : ""}
+        />
+        <button type="submit" className="btn btn-primary" disabled={busy}>
+          {busy ? "Logging in…" : "Log in"}
+        </button>
+      </form>
+      <p className="auth-switch">
+        No account yet?{" "}
+        <Link to="/sign_up" state={location.state}>
+          Create one
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }
 

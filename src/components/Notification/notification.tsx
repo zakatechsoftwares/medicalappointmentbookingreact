@@ -1,43 +1,29 @@
-import { Container } from "react-bootstrap";
-import Accordion from "react-bootstrap/Accordion";
-import { useSelector } from "react-redux";
+import { Link, useLocation } from "react-router-dom";
+import { useAppSelector } from "../../redux/store";
+import { formatDate, formatTime } from "../../utils/format";
+import { isActiveBooking } from "../../redux/DataType/DataType";
 
-interface BookingType {
-  id: string;
-  name: string;
-  phoneNumber: string;
-  doctorName: string;
-  doctorSpeciality: string;
-  dateOfAppointment: string;
-  timeSlot: string;
-}
-interface Booking {
-  booking: { bookings: BookingType[] };
-}
+/** One quiet line under the header with the patient's next visit. */
 const Notification = () => {
-  const bookings = useSelector((state: Booking) => state.booking.bookings);
+  const { pathname } = useLocation();
+  const next = useAppSelector((state) => state.booking.bookings.find(isActiveBooking));
+
+  // Not needed on the page that already lists appointments
+  if (!next || pathname === "/appointments") return null;
+
   return (
-    <Container fluid className="position-fixed top-5 pt-5">
-      {bookings.length > 0 &&
-        bookings.map((booking, index) => (
-          <Accordion defaultActiveKey="0" className="z-5" key={index}>
-            <Accordion.Item eventKey="0">
-              <Accordion.Header>
-                Appointment Details {bookings.length > 1 && index + 1}
-              </Accordion.Header>
-              <Accordion.Body>
-                <strong>Doctor:</strong> {booking.doctorName} <br />
-                <strong>Speciality:</strong> {booking.doctorSpeciality} <br />
-                <strong>Name:</strong> {booking.name} <br />
-                <strong>Phone number:</strong> {booking.phoneNumber} <br />
-                <strong>Date of Appointment:</strong>{" "}
-                {booking.dateOfAppointment} <br />
-                <strong>Time Slot:</strong> {booking.timeSlot} <br />
-              </Accordion.Body>
-            </Accordion.Item>
-          </Accordion>
-        ))}
-    </Container>
+    <div className="next-visit">
+      <div className="next-visit-inner">
+        <span className={`badge badge-${next.status}`}>{next.status}</span>
+        <span>
+          Next visit: <strong>{next.doctorName}</strong>,{" "}
+          <span className="num">
+            {formatDate(next.date)} at {formatTime(next.timeSlot)}
+          </span>
+        </span>
+        <Link to="/appointments">See details</Link>
+      </div>
+    </div>
   );
 };
 

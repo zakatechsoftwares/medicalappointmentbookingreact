@@ -1,18 +1,20 @@
 import { Outlet } from "react-router-dom";
 import Navbar from "../Navbar/Navbar";
-import Login from "../Login/Login";
-import { UserContext } from "../Routes/ProtectedRoute";
-import { useContext } from "react";
-
-//import LandingPag from "../Landing_Page/LandingPag";
-//import { Navigate } from "react-router-dom";
+import Notification from "../Notification/notification";
+import Footer from "./Footer";
 
 function Layout() {
-  const user = useContext(UserContext);
   return (
     <>
+      <a href="#main" className="skip-link">
+        Skip to content
+      </a>
       <Navbar />
-      <div style={{ paddingTop: "3%" }}>{user ? <Outlet /> : <Login />}</div>
+      <Notification />
+      <main id="main">
+        <Outlet />
+      </main>
+      <Footer />
     </>
   );
 }

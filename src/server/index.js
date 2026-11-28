@@ -1,37 +1,17 @@
-/* eslint-disable no-undef */
-import express from "express";
-import cors from "cors";
-import connectToMongo from "./db.js";
-import authRouter from "./routes/auth.js";
-import path from "path";
-import { fileURLToPath } from "url";
+import { config } from "./config.js";
+import { getPool } from "./db.js";
+import { createApp } from "./app.js";
 
-const app = express();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-app.use(express.static(path.join(__dirname, "../../dist")));
-console.log(__dirname);
+const db = getPool(config.databaseUrl);
+try {
+  await db.query("SELECT 1");
+  console.info("Connected to PostgreSQL");
+} catch (error) {
+  console.error("Can't reach PostgreSQL:", error.message);
+  process.exit(1);
+}
 
-app.set("view engine", "ejs");
-app.use(express.static("public"));
-
-const PORT = process.env.PORT || 8181;
-
-// Middleware
-app.use(express.json());
-app.use(cors());
-
-// Connect to MongoDB
-connectToMongo();
-
-// Routes
-app.use("/api/auth", authRouter);
-
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
-
-// Start the server
-app.listen(PORT, () => {
-  console.log(path.join(__dirname, "../../")); // console.log(`Server is running on port http://localhost:${PORT}`);
+const app = createApp(config, db);
+app.listen(config.port, () => {
+  console.log(`API running on http://localhost:${config.port}`);
 });

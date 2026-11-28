@@ -1,105 +1,76 @@
-import Container from "react-bootstrap/Container";
-import Table from "react-bootstrap/Table";
-import Button from "react-bootstrap/Button";
-import { useState, useEffect, useContext } from "react";
-// import Popup from "reactjs-popup";
-// import ReviewForm from "./ReviewForm";
-//import { useSelector } from "react-redux";
-import { DoctorType } from "../../redux/DataType/DataType";
-//import { ReduxStoreStateType } from "../../redux/DataType/DataType";
+import { Link, useNavigate } from "react-router-dom";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import PdfDownload from "./ReportPdfDownload";
-import { useNavigate } from "react-router-dom";
-import { UserContext } from "../Routes/ProtectedRoute";
-import { UserType } from "../../redux/DataType/DataType";
+import { useAuth } from "../Routes/AuthHook";
+import { useAppSelector } from "../../redux/store";
+import DoctorAvatar from "../../ui/DoctorAvatar";
 
+/** One report per doctor the patient has an appointment with. */
 function ReportsLayout() {
-  const [doctors, setDoctors] = useState<DoctorType[]>([]);
-  const user = useContext(UserContext) as UserType;
-
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const bookings = useAppSelector((s) => s.booking.bookings);
 
-  const getDoctorsDetails = () => {
-    fetch("https://api.npoint.io/9a5543d36f1460da2f63")
-      .then((res) => res.json())
-      .then((data) => {
-        setDoctors(data);
-      })
-      .catch((err) => console.log(err));
-  };
-
-  useEffect(
-    () => {
-      getDoctorsDetails();
-      // const authtoken = sessionStorage.getItem("auth-token");
-      // if (!authtoken) {
-      //     navigate("/login");
-      // }
-    } //, [searchParams]
+  const doctors = Array.from(
+    new Map(
+      bookings
+        .filter((b) => b.status !== "cancelled")
+        .map((b) => [b.doctorId, { id: b.doctorId, name: b.doctorName, speciality: b.doctorSpeciality }])
+    ).values()
   );
 
-  return (
-    <Container fluid>
-      <p className="align-text-center fw-bold fs-3">Reports</p>
-      <Table>
-        <thead>
-          <tr>
-            <th style={{ width: "5%" }}>Serial number</th>
-            <th style={{ width: "20%" }}>Doctor's Name</th>
-            <th style={{ width: "10%" }}> Speciality</th>
-            <th style={{ width: "40%" }}>View Report</th>
-            <th style={{ width: "33%" }}>Download Report</th>
-          </tr>
-        </thead>
-        <tbody>
-          {doctors.map((doctor: DoctorType, index) => (
-            <tr key={doctor.name}>
-              <td>{index + 1}</td>
-              <td>{doctor.name}</td>
-              <td> {doctor.speciality}</td>
-              <td>
-                <Button
-                  className="w-50 mt-1"
-                  onClick={() =>
-                    navigate("/reportdisplay", {
-                      state: {
-                        doctorName: doctor.name,
-                        speciality: doctor.speciality,
-                        phoneNumber: user.phone,
-                        email: user.email,
-                        name: user.name,
-                      },
-                    })
-                  }
-                >
-                  View Report
-                </Button>
-              </td>
+  if (!user) return null;
 
-              <td>
-                <PDFDownloadLink
-                  document={
-                    <PdfDownload
-                      doctorName={doctor.name}
-                      speciality={doctor.speciality}
-                      phoneNumber={user.phone}
-                      email={user.email}
-                      name={user.name}
-                    />
-                  }
-                  fileName="fee_acceptance.pdf"
-                  className="btn text-bg-primary w-75 mt-1"
-                >
-                  {({ loading }) =>
-                    loading ? "Loading document..." : "Download report"
-                  }
-                </PDFDownloadLink>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-    </Container>
+  return (
+    <div className="page page-narrow">
+      <div className="page-head">
+        <h1>Reports</h1>
+        <p>Medical reports from your doctors. Open one to read it, or save a PDF copy.</p>
+      </div>
+
+      {doctors.length === 0 ? (
+        <div className="panel empty">
+          <h2>No reports yet</h2>
+          <p>Reports appear here after you've booked a visit.</p>
+          <Link to="/instant-consultation" className="btn btn-primary">
+            Find a doctor
+          </Link>
+        </div>
+      ) : (
+        <ul className="list panel">
+          {doctors.map((doctor) => {
+            const report = {
+              doctorName: doctor.name,
+              speciality: doctor.speciality,
+              phoneNumber: user.phone,
+              email: user.email,
+              name: user.name,
+            };
+            return (
+              <li key={doctor.id} className="review-row">
+                <DoctorAvatar name={doctor.name} speciality={doctor.speciality} />
+                <div>
+                  <strong>{doctor.name}</strong>
+                  <p className="muted small">{doctor.speciality}</p>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", gridColumn: "2 / -1" }}>
+                  <button type="button" className="btn btn-quiet btn-sm" onClick={() => navigate("/reportdisplay", { state: report })}>
+                    Open report
+                  </button>
+                  <PDFDownloadLink
+                    document={<PdfDownload {...report} />}
+                    fileName={`report_${doctor.name.replace(/[^a-z0-9]+/gi, "_")}.pdf`}
+                    className="btn btn-primary btn-sm"
+                  >
+                    {({ loading }) => (loading ? "Preparing PDF…" : "Download PDF")}
+                  </PDFDownloadLink>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 

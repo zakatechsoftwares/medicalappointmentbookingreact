@@ -1,56 +1,15 @@
-import { useEffect, createContext, PropsWithChildren, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { PropsWithChildren } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "./AuthHook";
 
-//import Notification from "../Notification/notification";
-
-import { UserType } from "../../redux/DataType/DataType";
-
-export const UserContext = createContext<UserType | null | undefined>(null);
-
-//const [isLoggedIn, setIsLoggedIn] = useState(false);
-//const [username, setUsername] = useState("");
-//  const navigate = useNavigate();
-
+/** Shows its children only to logged-in users; everyone else goes to /login and comes back after. */
 export default function ProtectedRoute({ children }: PropsWithChildren) {
-  const [user, setUser] = useState();
-  useEffect(() => {
-    const storedemail = sessionStorage.getItem("email") as string;
+  const { user, loading } = useAuth();
+  const location = useLocation();
 
-    fetch("http://localhost:8181/api/auth/user", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        email: storedemail, // Add the email to the headers
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        setUser(data); // Handle the response data here
-      })
-      .catch((error) => {
-        console.error("There was a problem with your fetch operation:", error);
-      });
-  }, []);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // if (user === null || undefined) {
-    //   console.log(user + "protected route");
-    navigate("/signin", { replace: true });
-    // }
-  }, [navigate, user]);
-
-  return children;
+  if (loading) return <div className="spinner" role="status" aria-label="Loading" />;
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
+  }
+  return <>{children}</>;
 }
-
-// return (
-//   <UserContext.Provider value={user}>
-//     <Notification></Notification>
-//     <RouterProvider router={publicRoute} />
-//   </UserContext.Provider>
-// );

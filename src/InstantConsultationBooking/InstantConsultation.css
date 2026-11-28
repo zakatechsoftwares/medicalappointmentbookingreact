@@ -1,36 +1,204 @@
-.searchpage-container {
-    max-width: 1200px;
-    margin: auto;
-    margin-top:10%;
-    color: #414146;
-    padding: 0 20px;
-    position: static;
-    width: 100%;
+/* ---------- Search ---------- */
+.finder { margin-bottom: var(--space-5); }
+.finder-search {
+  position: relative;
+  display: flex;
+  gap: var(--space-2);
+  max-width: 40rem;
+  margin-bottom: var(--space-4);
 }
-.searchpage-container img {
-    max-width: 100%;
+.finder-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-soft);
+  pointer-events: none;
 }
-.search-results-container .doctorcard{
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-    padding: 18px;
-    border-radius: 4px;
-    background-color: #fff;
+.finder-search .input { padding-left: 44px; }
 
+/* On phones the chips scroll sideways instead of stacking into a wall */
+@media (max-width: 720px) {
+  .chip-row-scroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 0 calc(var(--space-4) * -1);
+    padding: 2px var(--space-4) var(--space-2);
+    scrollbar-width: none;
+  }
+  .chip-row-scroll::-webkit-scrollbar { display: none; }
+  .chip-row-scroll .chip { flex: none; }
 }
 
-.search-results-container>h2 {
-    text-align: left;
-    font-size: 24px;
-    font-weight: 700;
+.results-count { margin: var(--space-5) 0 var(--space-3); font-size: var(--step--1); }
+
+/* ---------- Doctor rows ---------- */
+.doctor-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  align-items: start;
+}
+@media (min-width: 720px) {
+  .doctor-row { grid-template-columns: auto 1fr auto; align-items: center; }
+}
+.doctor-row h2 { font-size: var(--step-1); margin: 0 0 2px; }
+.doctor-row-spec { margin: 0 0 var(--space-2); color: var(--ink-soft); }
+.doctor-row-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--step--1);
+}
+.doctor-row-facts strong { font-weight: 700; }
+.doctor-row-action {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+@media (min-width: 720px) {
+  .doctor-row-action { grid-column: auto; align-items: flex-end; text-align: right; }
+}
+.doctor-row-booked {
+  font-size: var(--step--1);
+  color: var(--leaf-deep);
+  font-weight: 700;
 }
 
-.search-results-container>h3 {
-    margin-top: 12px;
-    color: #2d2d32;
-    text-align: left;
-    font-size: 15px;
+/* ---------- Booking flow ---------- */
+.booking-steps {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+  font-size: var(--step--1);
 }
+.booking-steps li {
+  flex: 1;
+  padding-top: var(--space-2);
+  border-top: 4px solid var(--line);
+  color: var(--ink-soft);
+}
+.booking-steps li[aria-current="step"],
+.booking-steps li.done { border-color: var(--leaf); color: var(--ink); font-weight: 700; }
+
+.booking-doctor {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-4);
+  margin-bottom: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.booking-doctor p { margin: 0; }
+.booking-doctor .avatar { width: 44px; height: 44px; font-size: 0.95rem; }
+
+.booking-label {
+  display: block;
+  font: 700 var(--step-0) var(--font-body);
+  margin: 0 0 var(--space-3);
+}
+
+/* Date strip: two weeks you can swipe through */
+.date-strip {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding: 3px 3px var(--space-3);
+  margin: 0 -3px var(--space-4);
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+.date-chip {
+  flex: none;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 78px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.date-chip span { font-size: var(--step--1); color: var(--ink-soft); }
+.date-chip strong { font: 700 1.5rem / 1.1 var(--font-display); }
+.date-chip:hover:not([disabled]) { border-color: var(--leaf); }
+.date-chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.date-chip[aria-pressed="true"] span { color: #cbd8d2; }
+.date-chip[disabled] {
+  cursor: not-allowed;
+  background: transparent;
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+.slot-group { margin-bottom: var(--space-4); }
+.slot-group h3 {
+  font: 700 var(--step--1) var(--font-body);
+  color: var(--ink-soft);
+  margin: 0 0 var(--space-2);
+  letter-spacing: 0;
+}
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: var(--space-2);
+}
+.slot {
+  min-height: 46px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 var(--step--1) var(--font-body);
+  cursor: pointer;
+}
+.slot:hover:not([disabled]) { border-color: var(--leaf); }
+.slot[aria-pressed="true"] { background: var(--leaf); border-color: var(--leaf); color: #fff; }
+.slot[disabled] {
+  cursor: not-allowed;
+  background: transparent;
+  color: #9aa8a2;
+  text-decoration: line-through;
+}
+
+.booking-summary {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-2);
+}
+.booking-summary div { display: flex; justify-content: space-between; gap: var(--space-4); }
+.booking-summary dt { color: var(--ink-soft); }
+.booking-summary dd { margin: 0; font-weight: 700; text-align: right; }
+
+.booking-actions {
+  display: flex;
+  gap: var(--space-2);
+  position: sticky;
+  bottom: calc(var(--space-6) * -1);
+  margin: var(--space-5) calc(var(--space-5) * -1) calc(var(--space-6) * -1);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  background: linear-gradient(to top, var(--paper) 75%, transparent);
+}
+.booking-actions .btn-primary { flex: 1; }
+
+.booking-done { text-align: left; }
+.booking-done .notice { margin-bottom: var(--space-5); }
+.booking-done-links { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-5); }
