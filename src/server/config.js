@@ -26,5 +26,8 @@ export const config = {
     .split(",")
     .map((o) => o.trim())
     .filter(Boolean),
-  isProduction: process.env.NODE_ENV === "production",
+  isProduction:
+    process.env.NODE_ENV === "production" ||
+    process.env.APP_ENV === "production" ||
+    process.env.VERCEL_ENV === "production",
 };
