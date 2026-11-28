@@ -15,6 +15,8 @@ A web app for patients to find a doctor by speciality, pick a free date and time
 - **My Appointments** page: upcoming, past and cancelled, with cancel
 - Star ratings and reviews (one per patient per doctor; doctors' average rating updates automatically)
 - Profile editing, and PDF reports for doctors you've booked
+- **Video consultations** (Daily.co): patients choose "At the clinic" or "Video call" when booking; each video booking gets a private room, the join button opens 10 minutes before, and patients agree to a video consultation once before their first call
+- **Clinic desk** for staff (`/clinic`): see each day's bookings, confirm or mark them as seen, and the doctor starts video calls from here
 
 ## Getting started
 
@@ -53,10 +55,19 @@ API (`src/server/.env`) — see `src/server/.env.example`:
 | `CLIENT_ORIGIN` | no | Frontend URL(s) allowed by CORS, comma-separated. Default `http://localhost:5173` |
 | `PGSSL` | no | Set to `disable` for a local Postgres without SSL |
 | `JWT_EXPIRES_IN` | no | Default `7d` |
+| `DAILY_API_KEY` | no | Daily.co API key. Video consultations stay hidden until this is set |
 | `APP_TIMEZONE` | no | Decides "today" for bookings. Default `Africa/Lagos` |
 | `PORT` | no | Default `8181` |
 
 Frontend (`.env` in the project root, optional): `VITE_API_URL` — the API's URL when it's hosted separately (e.g. frontend on Vercel, API on Railway). If unset, it uses `http://localhost:8181` in development and the same origin in production.
+
+### Making someone clinic staff
+
+Clinic desk accounts sign up like patients, then get the staff role in the database:
+
+```sql
+UPDATE booking.portal_users SET "role" = 'ADMIN' WHERE "email" = 'doctor@example.com';
+```
 
 ## API
 
@@ -72,6 +83,11 @@ Frontend (`.env` in the project root, optional): `VITE_API_URL` — the API's UR
 | GET | `/api/appointments` | ✓ | Your appointments |
 | POST | `/api/appointments` | ✓ | Book `{ doctorId, patientName, phoneNumber, date, timeSlot }` |
 | PATCH | `/api/appointments/:id/cancel` | ✓ | Cancel one of your appointments |
+| POST | `/api/appointments/:id/join` | ✓ | Get into your video visit `{ consent: true }` the first time → `{ roomUrl, token }` |
+| GET | `/api/config` | – | `{ video }`: whether video consultations are switched on |
+| GET | `/api/clinic/appointments?date=` | staff | One day's bookings |
+| PATCH | `/api/clinic/appointments/:id/status` | staff | `{ status: "confirmed" \| "completed" \| "cancelled" }` |
+| POST | `/api/clinic/appointments/:id/join` | staff | Doctor joins a video visit as host |
 | GET | `/api/reviews/mine` | ✓ | Reviews you've written |
 | POST | `/api/reviews` | ✓ | Add/update a review `{ doctorId, rating, comment }` |
 

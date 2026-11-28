@@ -8,7 +8,7 @@
     "dev": "nodemon index.js",
     "migrate": "node migrate.js",
     "seed": "node seed.js",
-    "test": "node --test test/*.test.js",
+    "test": "node --test --test-concurrency=1 test/*.test.js",
     "build": "npm install --prefix ../../ && npm run build --prefix ../../ && npm install"
   },
   "keywords": [],

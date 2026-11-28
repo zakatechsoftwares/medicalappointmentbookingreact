@@ -48,3 +48,45 @@ export function isTooFarAhead(dateString, now = new Date()) {
   const limit = new Date(now.getTime() + MAX_DAYS_AHEAD * 24 * 60 * 60 * 1000);
   return dateString > nowInClinic(limit).date;
 }
+
+/** Offset of the clinic time zone from UTC, in ms, at a given instant. */
+function zoneOffsetMs(instant) {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(instant)
+      .map((x) => [x.type, x.value])
+  );
+  const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  return asUtc - Math.floor(instant.getTime() / 1000) * 1000;
+}
+
+/** The real moment an appointment starts: "2026-12-01" + "09:30" in clinic time -> Date */
+export function appointmentStart(dateString, timeSlot) {
+  const [y, m, d] = dateString.split("-").map(Number);
+  const [hh, mm] = timeSlot.split(":").map(Number);
+  const guess = Date.UTC(y, m - 1, d, hh, mm);
+  return new Date(guess - zoneOffsetMs(new Date(guess)));
+}
+
+// A video room opens a little before the slot and stays open for overruns
+export const VIDEO_OPENS_MINUTES_BEFORE = 10;
+export const VIDEO_CLOSES_MINUTES_AFTER = 60;
+
+/** When patients and doctors may join a video consultation. */
+export function videoWindow(dateString, timeSlot) {
+  const start = appointmentStart(dateString, timeSlot);
+  return {
+    start,
+    opensAt: new Date(start.getTime() - VIDEO_OPENS_MINUTES_BEFORE * 60_000),
+    closesAt: new Date(start.getTime() + VIDEO_CLOSES_MINUTES_AFTER * 60_000),
+  };
+}

@@ -8,12 +8,18 @@ import authRouter from "./routes/auth.js";
 import doctorsRouter from "./routes/doctors.js";
 import appointmentsRouter from "./routes/appointments.js";
 import reviewsRouter from "./routes/reviews.js";
+import clinicRouter from "./routes/clinic.js";
+import { createDailyClient } from "./services/daily.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** db: a pg Pool (or anything with .query and .connect) */
+/**
+ * db: a pg Pool (or anything with .query and .connect)
+ * config.dailyFetch: optional fetch replacement, used by tests to fake Daily.co
+ */
 export function createApp(config, db) {
   const app = express();
+  const daily = createDailyClient({ apiKey: config.dailyApiKey, fetchImpl: config.dailyFetch });
 
   app.disable("x-powered-by");
   // Behind Vercel/Railway proxies: needed so rate limiting sees the real client IP
@@ -38,9 +44,12 @@ export function createApp(config, db) {
       res.status(503).json({ ok: false, database: "down" });
     }
   });
+  // What the frontend may offer (no secrets)
+  app.get("/api/config", (_req, res) => res.json({ video: Boolean(daily) }));
   app.use("/api/auth", authRouter(config, db));
   app.use("/api/doctors", doctorsRouter(config, db));
-  app.use("/api/appointments", appointmentsRouter(config, db));
+  app.use("/api/appointments", appointmentsRouter(config, db, daily));
+  app.use("/api/clinic", clinicRouter(config, db, daily));
   app.use("/api/reviews", reviewsRouter(config, db));
   app.use("/api", (_req, res) => res.status(404).json({ error: "Not found" }));
 

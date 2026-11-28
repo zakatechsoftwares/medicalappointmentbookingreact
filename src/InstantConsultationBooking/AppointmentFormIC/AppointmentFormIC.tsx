@@ -4,7 +4,9 @@ import { api, errorMessage } from "../../api";
 import { useAuth } from "../../components/Routes/AuthHook";
 import { useAppDispatch } from "../../redux/store";
 import { bookAppointment } from "../../redux/slice/bookingSlice";
-import { BookingType, DoctorType, SlotsResponse } from "../../redux/DataType/DataType";
+import { BookingType, DoctorType, SlotsResponse, VisitType } from "../../redux/DataType/DataType";
+import { useAppConfig } from "../../utils/appConfig";
+import { VideoIcon, ClinicIcon } from "../../ui/Icons";
 import DoctorAvatar from "../../ui/DoctorAvatar";
 import ClinicCard from "../../ui/ClinicCard";
 import { downloadCalendarFile } from "../../utils/calendar";
@@ -24,6 +26,8 @@ const PHONE_RE = /^(\+234\d{10}|0\d{10})$/;
 export default function BookingFlow({ doctor, onClose }: Props) {
   const { user } = useAuth();
   const dispatch = useAppDispatch();
+  const { video: videoAvailable } = useAppConfig();
+  const canVideo = videoAvailable && doctor.offersVideo;
 
   const days = useMemo(() => {
     const today = new Date();
@@ -41,6 +45,7 @@ export default function BookingFlow({ doctor, onClose }: Props) {
   const [name, setName] = useState(user?.name ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [reason, setReason] = useState("");
+  const [visitType, setVisitType] = useState<VisitType>("in_person");
   const [touched, setTouched] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -102,6 +107,7 @@ export default function BookingFlow({ doctor, onClose }: Props) {
           date,
           timeSlot,
           reason: reason.trim(),
+          visitType: canVideo ? visitType : "in_person",
         })
       ).unwrap();
       setBooked(result);
@@ -122,8 +128,17 @@ export default function BookingFlow({ doctor, onClose }: Props) {
     return (
       <div className="booking-done">
         <div className="notice notice-success" role="status">
-          <strong>You're booked.</strong> The clinic will confirm shortly. Show this card at the
-          front desk when you arrive.
+          {booked.visitType === "video" ? (
+            <>
+              <strong>You're booked for a video call.</strong> The room opens 10 minutes before your
+              time. Join from My appointments on this phone or a computer.
+            </>
+          ) : (
+            <>
+              <strong>You're booked.</strong> The clinic will confirm shortly. Show this card at the
+              front desk when you arrive.
+            </>
+          )}
         </div>
         <ClinicCard
           doctorName={booked.doctorName}
@@ -133,6 +148,7 @@ export default function BookingFlow({ doctor, onClose }: Props) {
           patientName={booked.patientName}
           reason={booked.reason}
           status={booked.status}
+          visitType={booked.visitType}
         />
         <div className="booking-done-links">
           <button type="button" className="btn btn-primary" onClick={() => downloadCalendarFile(booked)}>
@@ -181,6 +197,40 @@ export default function BookingFlow({ doctor, onClose }: Props) {
 
       {step === 0 && (
         <>
+          {canVideo && (
+            <fieldset className="visit-type">
+              <legend className="booking-label">How would you like to be seen?</legend>
+              <label className="visit-option">
+                <input
+                  type="radio"
+                  name="visitType"
+                  value="in_person"
+                  checked={visitType === "in_person"}
+                  onChange={() => setVisitType("in_person")}
+                />
+                <ClinicIcon />
+                <span>
+                  <strong>At the clinic</strong>
+                  <span className="muted small">For examinations, scans and tests</span>
+                </span>
+              </label>
+              <label className="visit-option">
+                <input
+                  type="radio"
+                  name="visitType"
+                  value="video"
+                  checked={visitType === "video"}
+                  onChange={() => setVisitType("video")}
+                />
+                <VideoIcon />
+                <span>
+                  <strong>Video call</strong>
+                  <span className="muted small">Talk to the doctor from home, on your phone</span>
+                </span>
+              </label>
+            </fieldset>
+          )}
+
           <span className="booking-label" id="date-label">
             Choose a day
           </span>
@@ -318,6 +368,12 @@ export default function BookingFlow({ doctor, onClose }: Props) {
       {step === 2 && (
         <>
           <dl className="booking-summary">
+            {canVideo && (
+              <div>
+                <dt>Visit</dt>
+                <dd>{visitType === "video" ? "Video call" : "At the clinic"}</dd>
+              </div>
+            )}
             <div>
               <dt>Day</dt>
               <dd>{formatLongDate(date)}</dd>
@@ -340,7 +396,7 @@ export default function BookingFlow({ doctor, onClose }: Props) {
             </div>
             {doctor.consultationFee > 0 && (
               <div>
-                <dt>Fee, paid at the clinic</dt>
+                <dt>{visitType === "video" && canVideo ? "Fee" : "Fee, paid at the clinic"}</dt>
                 <dd>{formatFee(doctor.consultationFee)}</dd>
               </div>
             )}

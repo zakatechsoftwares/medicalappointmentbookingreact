@@ -25,6 +25,23 @@ export function requireAuth(jwtSecret) {
   };
 }
 
+/** Lets only clinic staff (role ADMIN) through. Checks the database, not just the token. */
+export function requireAdmin(db) {
+  return async (req, res, next) => {
+    try {
+      const { rows } = await db.query(`SELECT "role" FROM booking.portal_users WHERE "id" = $1`, [
+        req.userId,
+      ]);
+      if (rows[0]?.role !== "ADMIN") {
+        return res.status(403).json({ error: "Only clinic staff can do this" });
+      }
+      return next();
+    } catch (error) {
+      return next(error);
+    }
+  };
+}
+
 /** Sends express-validator errors in one consistent shape. */
 export function sendValidationErrors(res, result) {
   return res.status(400).json({

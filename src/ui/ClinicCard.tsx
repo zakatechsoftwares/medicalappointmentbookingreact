@@ -1,5 +1,6 @@
 import "./ClinicCard.css";
 import { formatTime } from "../utils/format";
+import { VideoIcon } from "./Icons";
 
 interface Props {
   doctorName: string;
@@ -9,6 +10,7 @@ interface Props {
   patientName: string;
   status?: string;
   reason?: string;
+  visitType?: "in_person" | "video";
   children?: React.ReactNode; // actions under the card
 }
 
@@ -27,6 +29,7 @@ export default function ClinicCard({
   patientName,
   status,
   reason,
+  visitType,
   children,
 }: Props) {
   const d = new Date(`${date}T00:00`);
@@ -40,7 +43,15 @@ export default function ClinicCard({
       </div>
       <div className="clinic-card-body">
         <div className="clinic-card-row">
-          <span className="clinic-card-brand">StayHealthy clinic card</span>
+          <span className="clinic-card-brand">
+            {visitType === "video" ? (
+              <span className="clinic-card-video">
+                <VideoIcon size={16} /> Video consultation
+              </span>
+            ) : (
+              "StayHealthy clinic card"
+            )}
+          </span>
           {status && <span className={`badge badge-${status}`}>{status}</span>}
         </div>
         <h3 className="clinic-card-doctor">{doctorName}</h3>

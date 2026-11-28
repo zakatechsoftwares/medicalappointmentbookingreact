@@ -21,6 +21,8 @@ export const config = {
   databaseUrl: required("DATABASE_URL"),
   jwtSecret: JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
+  // Video consultations are switched on only when a Daily.co API key is set
+  dailyApiKey: process.env.DAILY_API_KEY || "",
   // Comma-separated list of allowed frontend origins, e.g. "http://localhost:5173,https://stayhealthy.vercel.app"
   clientOrigins: (process.env.CLIENT_ORIGIN || "http://localhost:5173")
     .split(",")
