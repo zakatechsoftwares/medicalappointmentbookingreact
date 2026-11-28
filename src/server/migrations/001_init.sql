@@ -8,8 +8,6 @@
 -- Everything lives in its own "booking" schema so it can share a database with
 -- other apps, and Supabase doesn't expose it through its public REST API.
 
-CREATE SCHEMA IF NOT EXISTS booking;
-
 CREATE TYPE booking."PortalRole" AS ENUM ('PATIENT', 'ADMIN');
 -- Same values as the EMR's AppointmentStatus
 CREATE TYPE booking."AppointmentStatus" AS ENUM ('PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED');

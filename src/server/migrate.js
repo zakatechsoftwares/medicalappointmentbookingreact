@@ -10,7 +10,10 @@ import { getPool, closePool } from "./db.js";
 const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), "migrations");
 
 export async function migrate(db) {
-  await db.query(`CREATE SCHEMA IF NOT EXISTS booking`);
+  // On Supabase the app's role owns the "booking" schema but can't create schemas,
+  // so only try to create it when it doesn't exist yet (e.g. a fresh local database).
+  const { rowCount } = await db.query(`SELECT 1 FROM pg_namespace WHERE nspname = 'booking'`);
+  if (!rowCount) await db.query(`CREATE SCHEMA booking`);
   await db.query(`CREATE TABLE IF NOT EXISTS booking.schema_migrations (
     name TEXT PRIMARY KEY,
     "appliedAt" TIMESTAMPTZ NOT NULL DEFAULT now()
