@@ -162,7 +162,7 @@ describe("full booking flow (PostgreSQL)", { skip: !TEST_DB && "set TEST_DATABAS
     db = getPool(TEST_DB);
     await db.query("DROP SCHEMA IF EXISTS booking CASCADE");
     const applied = await migrate(db);
-    assert.deepEqual(applied, ["001_init.sql"]);
+    assert.deepEqual(applied, ["001_init.sql", "002_video_consultations.sql"]);
     assert.equal(await seedDoctors(db), 12);
     assert.equal(await seedDoctors(db), 0, "seeding twice adds nothing");
     app = createApp(config, db);

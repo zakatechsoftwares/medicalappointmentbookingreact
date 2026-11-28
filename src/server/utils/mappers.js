@@ -1,3 +1,5 @@
+import { videoWindow } from "./time.js";
+
 // Turn database rows into the JSON shapes the React app expects.
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -37,6 +39,7 @@ export function toPublicDoctor(row) {
     workingDays: row.workingDays,
     ratings: Math.round(row.ratingAverage * 10) / 10,
     ratingCount: row.ratingCount,
+    offersVideo: row.offersVideo,
   };
 }
 
@@ -50,6 +53,10 @@ export function toPublicAppointment(row) {
     timeSlot: row.timeSlot,
     status: row.status.toLowerCase(),
     reason: row.reason,
+    visitType: row.visitType === "VIDEO" ? "video" : "in_person",
+    videoConsented: Boolean(row.videoConsentAt),
+    // When the video room can be entered (exact instants, so the browser's time zone doesn't matter)
+    ...(row.visitType === "VIDEO" ? videoTimes(row.date, row.timeSlot) : {}),
     doctorId: row.doctorId,
     doctorName: `${row.doctorTitle} ${row.doctorFirstName} ${row.doctorLastName}`.trim(),
     doctorSpeciality: row.doctorSpeciality,
@@ -66,4 +73,19 @@ export function toPublicReview(row) {
     comment: row.comment,
     createdAt: row.createdAt,
   };
+}
+
+/** For the clinic desk: the appointment plus who booked it */
+export function toClinicAppointment(row) {
+  return {
+    ...toPublicAppointment(row),
+    accountName: fullName({ firstName: row.userFirstName, lastName: row.userLastName }),
+    accountEmail: row.userEmail,
+    hasVideoRoom: Boolean(row.videoRoomName),
+  };
+}
+
+function videoTimes(date, timeSlot) {
+  const { opensAt, closesAt } = videoWindow(date, timeSlot);
+  return { videoOpensAt: opensAt.toISOString(), videoClosesAt: closesAt.toISOString() };
 }

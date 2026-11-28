@@ -9,6 +9,7 @@ export interface DoctorType {
   workingDays: number[];
   ratings: number;
   ratingCount: number;
+  offersVideo: boolean;
 }
 
 export interface SlotType {
@@ -36,6 +37,15 @@ export interface ReviewType {
 // Same values as the EMR (lower-cased). "pending" = booked online, awaiting the clinic's confirmation.
 export type AppointmentStatus = "pending" | "confirmed" | "completed" | "cancelled";
 
+export type VisitType = "in_person" | "video";
+
+export interface VideoJoinResponse {
+  roomUrl: string;
+  token: string;
+  doctorName?: string;
+  patientName?: string;
+}
+
 export const isActiveBooking = (b: { status: AppointmentStatus }) =>
   b.status === "pending" || b.status === "confirmed";
 
@@ -50,6 +60,10 @@ export interface BookingType {
   timeSlot: string; // HH:MM
   status: AppointmentStatus;
   reason: string;
+  visitType: VisitType;
+  videoConsented: boolean;
+  videoOpensAt?: string; // ISO instant, video visits only
+  videoClosesAt?: string;
   createdAt: string;
 }
 
@@ -60,6 +74,7 @@ export interface NewBookingType {
   date: string;
   timeSlot: string;
   reason?: string;
+  visitType?: VisitType;
 }
 
 // --------------------------- Medical report ---------------------------

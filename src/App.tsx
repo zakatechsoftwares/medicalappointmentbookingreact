@@ -20,6 +20,10 @@ import ProfileCard from "./components/ProfileCard/ProfileCard.tsx";
 const ReportsLayout = lazy(
   () => import("./components/ReportsLayout/ReportsLayout.tsx"),
 );
+// Video calls and the clinic desk load only when opened
+const VisitPage = lazy(() => import("./components/Video/VisitPage.tsx"));
+const ClinicDesk = lazy(() => import("./components/Clinic/ClinicDesk.tsx"));
+const DoctorVisitPage = lazy(() => import("./components/Clinic/DoctorVisitPage.tsx"));
 const PdfDisplay = lazy(
   () => import("./components/ReportsLayout/ReportPdfDisplay.tsx"),
 );
@@ -44,6 +48,30 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <MyAppointments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/visit/:id"
+                element={
+                  <ProtectedRoute>
+                    <VisitPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinic"
+                element={
+                  <ProtectedRoute staffOnly>
+                    <ClinicDesk />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clinic/visit/:id"
+                element={
+                  <ProtectedRoute staffOnly>
+                    <DoctorVisitPage />
                   </ProtectedRoute>
                 }
               />

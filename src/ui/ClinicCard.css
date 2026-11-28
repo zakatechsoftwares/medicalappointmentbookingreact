@@ -114,3 +114,11 @@
   .clinic-card-date { font-size: 2.8rem; }
   .clinic-card-body { padding: var(--space-4); }
 }
+
+.clinic-card-video {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--leaf-deep);
+  font-weight: 700;
+}

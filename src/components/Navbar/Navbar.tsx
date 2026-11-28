@@ -59,6 +59,7 @@ function AppNavbar() {
               <NavLink to="/appointments">My appointments</NavLink>
               <NavLink to="/reviews">Reviews</NavLink>
               <NavLink to="/reportlayout">Reports</NavLink>
+              {user.role === "admin" && <NavLink to="/clinic">Clinic desk</NavLink>}
             </>
           )}
           <span className="site-nav-spacer" />

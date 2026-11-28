@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../redux/store";
 import { cancelAppointment, fetchAppointments } from "../../redux/slice/bookingSlice";
@@ -8,6 +8,34 @@ import DoctorAvatar from "../../ui/DoctorAvatar";
 import { downloadCalendarFile } from "../../utils/calendar";
 import { formatDate, formatTime } from "../../utils/format";
 import "./MyAppointments.css";
+
+const timeFmt = new Intl.DateTimeFormat("en-GB", { hour: "numeric", minute: "2-digit", hour12: true });
+
+/** For video visits: a join button that switches on 10 minutes before the appointment. */
+function JoinVideoButton({ booking }: { booking: BookingType }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  if (!booking.videoOpensAt || !booking.videoClosesAt) return null;
+  const opens = Date.parse(booking.videoOpensAt);
+  const closes = Date.parse(booking.videoClosesAt);
+  if (now > closes) return null;
+  if (now < opens) {
+    const sameDay = new Date(opens).toDateString() === new Date(now).toDateString();
+    return (
+      <span className="join-later small">
+        Video room opens {sameDay ? `at ${timeFmt.format(opens)}` : "10 minutes before your time"}
+      </span>
+    );
+  }
+  return (
+    <Link to={`/visit/${booking.id}`} className="btn btn-primary btn-sm">
+      Join video call
+    </Link>
+  );
+}
 
 /** Cancel asks once more inline, instead of a browser pop-up. */
 function CancelButton({ booking }: { booking: BookingType }) {
@@ -62,7 +90,7 @@ function MyAppointments() {
       <div className="page-head appointments-head">
         <div>
           <h1>My appointments</h1>
-          <p>Show the card at the front desk when you arrive.</p>
+          <p>Show the card at the front desk, or join your video visits from here.</p>
         </div>
         <Link to="/instant-consultation" className="btn btn-primary">
           Book another
@@ -101,7 +129,9 @@ function MyAppointments() {
                   patientName={b.patientName}
                   reason={b.reason}
                   status={b.status}
+                  visitType={b.visitType}
                 >
+                  {b.visitType === "video" && <JoinVideoButton booking={b} />}
                   <button type="button" className="btn btn-quiet btn-sm" onClick={() => downloadCalendarFile(b)}>
                     Add to calendar
                   </button>
@@ -121,7 +151,8 @@ function MyAppointments() {
                     <div>
                       <strong>{b.doctorName}</strong>
                       <p className="muted small">
-                        {formatDate(b.date)}, {formatTime(b.timeSlot)}. {b.reason}
+                        {formatDate(b.date)}, {formatTime(b.timeSlot)}
+                        {b.visitType === "video" ? ", video call" : ""}. {b.reason}
                       </p>
                     </div>
                     <span className={`badge badge-${b.status}`}>{b.status}</span>
