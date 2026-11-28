@@ -84,3 +84,7 @@ cd src/server && npm test
 
 - **One server:** run `npm run build` in `src/server` (builds the frontend into `dist/`), then `npm start`. Express serves both the API and the app.
 - **Separate hosts:** deploy `src/server` (e.g. Railway) with the env vars above, set `CLIENT_ORIGIN` to the frontend URL, and deploy the frontend (e.g. Vercel) with `VITE_API_URL` set to the API URL.
+
+### Vercel (frontend + API together)
+
+`vercel.json` builds the React app and runs the Express API as a serverless function (`api/index.js` → `src/server/serverless.js`). In the Vercel project, set `MONGO_URI` and `JWT_SECRET` (and optionally `MONGO_DB_NAME`). Leave `VITE_API_URL` unset so the app calls the API on the same domain. In MongoDB Atlas, allow access from anywhere (`0.0.0.0/0`), because Vercel functions don't have fixed IP addresses.

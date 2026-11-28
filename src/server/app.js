@@ -15,6 +15,8 @@ export function createApp(config) {
   const app = express();
 
   app.disable("x-powered-by");
+  // Behind Vercel/Railway proxies: needed so rate limiting sees the real client IP
+  app.set("trust proxy", 1);
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(
     cors({
