@@ -1,0 +1,116 @@
+.clinic-card {
+  --hole: 18px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 0 var(--line), 0 14px 30px -22px rgba(22, 48, 43, 0.45);
+  overflow: hidden;
+}
+
+/* Date stub, torn off along the dashed line */
+.clinic-card-stub {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5) var(--space-3);
+  background: var(--ink);
+  color: var(--paper);
+  text-align: center;
+}
+.clinic-card-stub::after {
+  /* perforation */
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  right: -1px;
+  border-right: 2px dashed rgba(245, 247, 244, 0.35);
+}
+.clinic-card::before,
+.clinic-card::after {
+  /* punch holes at both ends of the tear line */
+  content: "";
+  position: absolute;
+  left: calc(7.5rem - var(--hole) / 2);
+  width: var(--hole);
+  height: var(--hole);
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  z-index: 1;
+}
+.clinic-card::before { top: calc(var(--hole) / -2); }
+.clinic-card::after { bottom: calc(var(--hole) / -2); }
+
+.clinic-card-day {
+  font-size: var(--step--1);
+  opacity: 0.8;
+}
+.clinic-card-date {
+  font: 700 3.4rem / 1 var(--font-display);
+  letter-spacing: -0.04em;
+  margin: 2px 0;
+}
+.clinic-card-month { font-size: var(--step--1); }
+.clinic-card-time {
+  margin-top: var(--space-3);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--marigold);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: var(--step--1);
+  white-space: nowrap;
+}
+
+.clinic-card-body {
+  padding: var(--space-5) var(--space-5) var(--space-5) calc(var(--space-5) + 4px);
+  min-width: 0;
+}
+.clinic-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.clinic-card-brand {
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+.clinic-card-doctor { margin: 0; font-size: var(--step-1); }
+.clinic-card-spec { margin: 2px 0 var(--space-4); color: var(--ink-soft); }
+.clinic-card-meta {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+.clinic-card-meta div { display: flex; gap: var(--space-3); }
+.clinic-card-meta dt {
+  flex: none;
+  width: 4.5rem;
+  color: var(--ink-soft);
+  font-size: var(--step--1);
+  padding-top: 2px;
+}
+.clinic-card-meta dd { margin: 0; overflow-wrap: anywhere; }
+.clinic-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+@media (max-width: 420px) {
+  .clinic-card { grid-template-columns: 6rem 1fr; }
+  .clinic-card::before,
+  .clinic-card::after { left: calc(6rem - var(--hole) / 2); }
+  .clinic-card-date { font-size: 2.8rem; }
+  .clinic-card-body { padding: var(--space-4); }
+}

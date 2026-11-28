@@ -15,6 +15,7 @@ import Sign_Up from "./components/Sign_Up/Sign_Up.tsx";
 import InstantConsultation from "./InstantConsultationBooking/InstantConsultation.tsx";
 import MyAppointments from "./components/MyAppointments/MyAppointments.tsx";
 import Reviews from "./components/ReviewForm/Reviews.tsx";
+import ProfileCard from "./components/ProfileCard/ProfileCard.tsx";
 // The PDF library is large, so the report pages load only when opened
 const ReportsLayout = lazy(
   () => import("./components/ReportsLayout/ReportsLayout.tsx"),
@@ -27,10 +28,10 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
-        <Suspense fallback={<div className="p-5 text-center">Loading...</div>}>
+        <Suspense fallback={<div className="spinner" role="status" aria-label="Loading" />}>
           <Routes>
-            <Route path="/" element={<LandingPag />} />
             <Route element={<Layout />}>
+              <Route path="/" element={<LandingPag />} />
               {/* Anyone can browse doctors; booking asks them to log in */}
               <Route
                 path="/instant-consultation"
@@ -43,6 +44,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <MyAppointments />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <ProfileCard />
                   </ProtectedRoute>
                 }
               />

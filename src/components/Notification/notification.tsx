@@ -1,30 +1,29 @@
-import { useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAppSelector } from "../../redux/store";
 import { formatDate, formatTime } from "../../utils/format";
 import { isActiveBooking } from "../../redux/DataType/DataType";
 
-/** A small banner showing the patient's next appointment. */
+/** One quiet line under the header with the patient's next visit. */
 const Notification = () => {
-  const [dismissed, setDismissed] = useState<string | null>(null);
-  const next = useAppSelector((state) =>
-    state.booking.bookings.find(isActiveBooking)
-  );
+  const { pathname } = useLocation();
+  const next = useAppSelector((state) => state.booking.bookings.find(isActiveBooking));
 
-  if (!next || dismissed === next.id) return null;
+  // Not needed on the page that already lists appointments
+  if (!next || pathname === "/appointments") return null;
 
   return (
-    <Alert
-      variant="info"
-      dismissible
-      onClose={() => setDismissed(next.id)}
-      className="mx-3 mb-0"
-    >
-      <strong>Next appointment:</strong> {next.doctorName} ({next.doctorSpeciality}) on{" "}
-      {formatDate(next.date)} at {formatTime(next.timeSlot)}.{" "}
-      <Link to="/appointments">View all</Link>
-    </Alert>
+    <div className="next-visit">
+      <div className="next-visit-inner">
+        <span className={`badge badge-${next.status}`}>{next.status}</span>
+        <span>
+          Next visit: <strong>{next.doctorName}</strong>,{" "}
+          <span className="num">
+            {formatDate(next.date)} at {formatTime(next.timeSlot)}
+          </span>
+        </span>
+        <Link to="/appointments">See details</Link>
+      </div>
+    </div>
   );
 };
 

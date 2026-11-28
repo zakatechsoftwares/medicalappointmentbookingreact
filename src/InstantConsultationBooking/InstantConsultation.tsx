@@ -1,61 +1,77 @@
 import { useEffect, useState } from "react";
-import "./InstantConsultation.css";
 import { useSearchParams } from "react-router-dom";
-import Spinner from "react-bootstrap/Spinner";
-import Alert from "react-bootstrap/Alert";
 import FindDoctorSearchIC from "./FindDoctorSearchIC/FindDoctorSearchIC";
 import DoctorCardIC from "./DoctorCardIC/DoctorCardIC";
 import { api, errorMessage } from "../api";
 import { DoctorType } from "../redux/DataType/DataType";
+import "./InstantConsultation.css";
 
 const InstantConsultation = () => {
-  const [searchParams] = useSearchParams();
-  const speciality = searchParams.get("speciality") ?? "";
+  const [params, setParams] = useSearchParams();
+  const speciality = params.get("speciality") ?? "";
+  const search = params.get("search") ?? "";
   const [doctors, setDoctors] = useState<DoctorType[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Re-run only when the chosen speciality changes (it used to refetch on every render)
   useEffect(() => {
-    if (!speciality) {
-      setDoctors([]);
-      return;
-    }
     let cancelled = false;
+    const q = new URLSearchParams();
+    if (speciality) q.set("speciality", speciality);
+    if (search) q.set("search", search);
     setLoading(true);
     setError("");
-    api<DoctorType[]>(`/api/doctors?speciality=${encodeURIComponent(speciality)}`)
+    api<DoctorType[]>(`/api/doctors?${q}`)
       .then((data) => !cancelled && setDoctors(data))
       .catch((e) => !cancelled && setError(errorMessage(e)))
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
     };
-  }, [speciality]);
+  }, [speciality, search]);
+
+  const heading = speciality || "Find a doctor";
 
   return (
-    <center>
-      <div className="searchpage-container">
-        <FindDoctorSearchIC />
-        <div className="search-results-container">
-          {loading && <Spinner animation="border" role="status" />}
-          {error && <Alert variant="danger">{error}</Alert>}
-          {speciality && !loading && !error && (
-            <center>
-              <h2>
-                {doctors.length} {doctors.length === 1 ? "doctor is" : "doctors are"} available
-              </h2>
-              <h3>Book appointments with minimum wait-time & verified doctor details</h3>
-              {doctors.length > 0 ? (
-                doctors.map((doctor) => <DoctorCardIC doctor={doctor} key={doctor.id} />)
-              ) : (
-                <p>No doctors found.</p>
-              )}
-            </center>
-          )}
-        </div>
+    <div className="page">
+      <div className="page-head">
+        <h1>{heading}</h1>
+        <p>Pick a doctor to see their free times. Booking takes about a minute.</p>
       </div>
-    </center>
+
+      <FindDoctorSearchIC />
+
+      <div aria-live="polite" aria-busy={loading}>
+        {loading && <div className="spinner" role="status" aria-label="Loading doctors" />}
+        {error && <div className="notice notice-error">{error}</div>}
+
+        {!loading && !error && (
+          <>
+            <p className="results-count muted">
+              {doctors.length === 0
+                ? "No doctors match that search."
+                : `${doctors.length} doctor${doctors.length === 1 ? "" : "s"}${search ? ` matching “${search}”` : ""}`}
+            </p>
+            {doctors.length > 0 ? (
+              <ul className="list panel doctor-list">
+                {doctors.map((doctor) => (
+                  <li key={doctor.id}>
+                    <DoctorCardIC doctor={doctor} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="panel empty">
+                <p>Try another speciality, or clear the search to see every doctor.</p>
+                <button type="button" className="btn btn-quiet" onClick={() => setParams({})}>
+                  Show all doctors
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
 };
 

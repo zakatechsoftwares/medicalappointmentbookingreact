@@ -1,4 +1,8 @@
-import "bootstrap/dist/css/bootstrap.css";
+// Fonts are bundled with the app: no Google request, and they work on slow or flaky data
+import "@fontsource/atkinson-hyperlegible/400.css";
+import "@fontsource/atkinson-hyperlegible/700.css";
+import "@fontsource-variable/bricolage-grotesque/opsz.css";
+import "./styles/app.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";

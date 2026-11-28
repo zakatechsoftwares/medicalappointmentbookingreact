@@ -1,127 +1,138 @@
 import { useState } from "react";
-import Container from "react-bootstrap/Container";
-import Table from "react-bootstrap/Table";
-import Button from "react-bootstrap/Button";
-import Badge from "react-bootstrap/Badge";
-import Alert from "react-bootstrap/Alert";
-import Spinner from "react-bootstrap/Spinner";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../redux/store";
 import { cancelAppointment, fetchAppointments } from "../../redux/slice/bookingSlice";
-import { formatDate, formatTime } from "../../utils/format";
 import { BookingType, isActiveBooking } from "../../redux/DataType/DataType";
+import ClinicCard from "../../ui/ClinicCard";
+import DoctorAvatar from "../../ui/DoctorAvatar";
+import { downloadCalendarFile } from "../../utils/calendar";
+import { formatDate, formatTime } from "../../utils/format";
+import "./MyAppointments.css";
 
-const STATUS_VARIANT: Record<BookingType["status"], string> = {
-  pending: "warning",
-  confirmed: "primary",
-  cancelled: "secondary",
-  completed: "success",
-};
+/** Cancel asks once more inline, instead of a browser pop-up. */
+function CancelButton({ booking }: { booking: BookingType }) {
+  const dispatch = useAppDispatch();
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const cancel = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      await dispatch(cancelAppointment(booking.id)).unwrap();
+    } catch (e) {
+      setError(String(e));
+      setBusy(false);
+    }
+  };
+
+  if (!confirming) {
+    return (
+      <button type="button" className="btn btn-quiet btn-sm" onClick={() => setConfirming(true)}>
+        Cancel appointment
+      </button>
+    );
+  }
+  return (
+    <div className="cancel-confirm" role="group" aria-label="Confirm cancellation">
+      <span>Cancel this visit? The time goes back to other patients.</span>
+      <div>
+        <button type="button" className="btn btn-danger-solid btn-sm" onClick={cancel} disabled={busy}>
+          {busy ? "Cancelling…" : "Yes, cancel it"}
+        </button>
+        <button type="button" className="btn btn-quiet btn-sm" onClick={() => setConfirming(false)} disabled={busy}>
+          Keep it
+        </button>
+      </div>
+      {error && <span className="field-error">{error}</span>}
+    </div>
+  );
+}
 
 function MyAppointments() {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const { bookings, status, error } = useAppSelector((s) => s.booking);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [actionError, setActionError] = useState("");
-
-  const handleCancel = async (id: string) => {
-    if (!window.confirm("Cancel this appointment?")) return;
-    setBusyId(id);
-    setActionError("");
-    try {
-      await dispatch(cancelAppointment(id)).unwrap();
-    } catch (e) {
-      setActionError(String(e));
-    } finally {
-      setBusyId(null);
-    }
-  };
 
   const upcoming = bookings.filter(isActiveBooking);
   const past = bookings.filter((b) => !isActiveBooking(b)).reverse();
 
-  const renderTable = (list: BookingType[], allowCancel: boolean) => (
-    <Table responsive hover>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Time</th>
-          <th>Doctor</th>
-          <th>Speciality</th>
-          <th>Patient</th>
-          <th>Reason</th>
-          <th>Status</th>
-          {allowCancel && <th></th>}
-        </tr>
-      </thead>
-      <tbody>
-        {list.map((b) => (
-          <tr key={b.id}>
-            <td>{formatDate(b.date)}</td>
-            <td>{formatTime(b.timeSlot)}</td>
-            <td>{b.doctorName}</td>
-            <td>{b.doctorSpeciality}</td>
-            <td>{b.patientName}</td>
-            <td>{b.reason}</td>
-            <td>
-              <Badge bg={STATUS_VARIANT[b.status]}>{b.status}</Badge>
-            </td>
-            {allowCancel && (
-              <td>
-                <Button
-                  size="sm"
-                  variant="outline-danger"
-                  disabled={busyId === b.id}
-                  onClick={() => handleCancel(b.id)}
-                >
-                  {busyId === b.id ? "Cancelling..." : "Cancel"}
-                </Button>
-              </td>
-            )}
-          </tr>
-        ))}
-      </tbody>
-    </Table>
-  );
-
   return (
-    <Container className="py-4">
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2 className="m-0">My Appointments</h2>
-        <Button onClick={() => navigate("/instant-consultation")}>Book new</Button>
+    <div className="page page-narrow">
+      <div className="page-head appointments-head">
+        <div>
+          <h1>My appointments</h1>
+          <p>Show the card at the front desk when you arrive.</p>
+        </div>
+        <Link to="/instant-consultation" className="btn btn-primary">
+          Book another
+        </Link>
       </div>
 
-      {status === "loading" && <Spinner animation="border" />}
+      {status === "loading" && <div className="spinner" role="status" aria-label="Loading appointments" />}
       {status === "error" && (
-        <Alert variant="danger">
+        <div className="notice notice-error">
           {error}{" "}
-          <Button size="sm" variant="link" onClick={() => dispatch(fetchAppointments())}>
+          <button type="button" className="btn-text" onClick={() => dispatch(fetchAppointments())}>
             Try again
-          </Button>
-        </Alert>
+          </button>
+        </div>
       )}
-      {actionError && <Alert variant="danger">{actionError}</Alert>}
 
       {status === "ready" && (
         <>
-          <h5>Upcoming</h5>
-          {upcoming.length ? (
-            renderTable(upcoming, true)
+          {upcoming.length === 0 ? (
+            <div className="panel empty">
+              <h2>No upcoming visits</h2>
+              <p>When you book a doctor, your clinic card will appear here.</p>
+              <Link to="/instant-consultation" className="btn btn-primary">
+                Find a doctor
+              </Link>
+            </div>
           ) : (
-            <p className="text-muted">
-              No upcoming appointments. <Link to="/instant-consultation">Find a doctor</Link>
-            </p>
+            <div className="appointment-stack">
+              {upcoming.map((b) => (
+                <ClinicCard
+                  key={b.id}
+                  doctorName={b.doctorName}
+                  speciality={b.doctorSpeciality}
+                  date={b.date}
+                  timeSlot={b.timeSlot}
+                  patientName={b.patientName}
+                  reason={b.reason}
+                  status={b.status}
+                >
+                  <button type="button" className="btn btn-quiet btn-sm" onClick={() => downloadCalendarFile(b)}>
+                    Add to calendar
+                  </button>
+                  <CancelButton booking={b} />
+                </ClinicCard>
+              ))}
+            </div>
           )}
+
           {past.length > 0 && (
-            <>
-              <h5 className="mt-4">Past and cancelled</h5>
-              {renderTable(past, false)}
-            </>
+            <section className="history" aria-labelledby="history-title">
+              <h2 id="history-title">Past and cancelled</h2>
+              <ul className="list panel">
+                {past.map((b) => (
+                  <li key={b.id} className="history-row">
+                    <DoctorAvatar name={b.doctorName} speciality={b.doctorSpeciality} />
+                    <div>
+                      <strong>{b.doctorName}</strong>
+                      <p className="muted small">
+                        {formatDate(b.date)}, {formatTime(b.timeSlot)}. {b.reason}
+                      </p>
+                    </div>
+                    <span className={`badge badge-${b.status}`}>{b.status}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
         </>
       )}
-    </Container>
+    </div>
   );
 }
 

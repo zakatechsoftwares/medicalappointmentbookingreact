@@ -1,0 +1,30 @@
+.appointments-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--space-4);
+}
+.appointment-stack { display: grid; gap: var(--space-6); }
+
+.cancel-confirm {
+  display: grid;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--danger-wash);
+  font-size: var(--step--1);
+}
+.cancel-confirm > div { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.history { margin-top: var(--space-7); }
+.history-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+}
+.history-row p { margin: 0; }
+.history-row .avatar { width: 40px; height: 40px; font-size: 0.9rem; }

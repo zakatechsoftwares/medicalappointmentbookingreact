@@ -1,156 +1,361 @@
-import React, { useEffect, useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Spinner from "react-bootstrap/Spinner";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { api, errorMessage } from "../../api";
 import { useAuth } from "../../components/Routes/AuthHook";
-import { formatTime } from "../../utils/format";
-import { DoctorType, NewBookingType, SlotsResponse } from "../../redux/DataType/DataType";
+import { useAppDispatch } from "../../redux/store";
+import { bookAppointment } from "../../redux/slice/bookingSlice";
+import { BookingType, DoctorType, SlotsResponse } from "../../redux/DataType/DataType";
+import DoctorAvatar from "../../ui/DoctorAvatar";
+import ClinicCard from "../../ui/ClinicCard";
+import { downloadCalendarFile } from "../../utils/calendar";
+import { formatFee, formatLongDate, formatTime, toDateInput } from "../../utils/format";
 
 interface Props {
   doctor: DoctorType;
-  onSubmit: (data: NewBookingType) => Promise<void>;
+  onClose: () => void;
 }
 
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAYS_SHOWN = 21;
+const WEEKDAY = new Intl.DateTimeFormat("en-GB", { weekday: "short" });
+const STEPS = ["Date & time", "Your details", "Confirm"];
+const PHONE_RE = /^(\+234\d{10}|0\d{10})$/;
 
-/** "YYYY-MM-DD" for a local date */
-const toDateInput = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-
-const AppointmentFormIC: React.FC<Props> = ({ doctor, onSubmit }) => {
+/** Three short steps: when, who, check and book. Then the clinic card. */
+export default function BookingFlow({ doctor, onClose }: Props) {
   const { user } = useAuth();
-  const today = new Date();
-  const maxDate = new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000);
+  const dispatch = useAppDispatch();
 
-  const [name, setName] = useState(user?.name ?? "");
-  const [phoneNumber, setPhoneNumber] = useState(user?.phone ?? "");
-  const [date, setDate] = useState(toDateInput(today));
+  const days = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: DAYS_SHOWN }, (_, i) => {
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+      return { iso: toDateInput(d), day: d.getDate(), weekday: WEEKDAY.format(d), works: doctor.workingDays.includes(d.getDay()) };
+    });
+  }, [doctor.workingDays]);
+
+  const [step, setStep] = useState(0);
+  const [date, setDate] = useState(() => days.find((d) => d.works)?.iso ?? days[0].iso);
   const [slots, setSlots] = useState<SlotsResponse | null>(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [timeSlot, setTimeSlot] = useState("");
+  const [name, setName] = useState(user?.name ?? "");
+  const [phone, setPhone] = useState(user?.phone ?? "");
   const [reason, setReason] = useState("");
+  const [touched, setTouched] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [booked, setBooked] = useState<BookingType | null>(null);
+  // While true, a day with no free times skips ahead to the next working day,
+  // so late in the afternoon the sheet doesn't open on a fully past "today".
+  const autoPick = useRef(true);
+
+  const loadSlots = (forDate: string) =>
+    api<SlotsResponse>(`/api/doctors/${doctor.id}/slots?date=${forDate}`).then(setSlots);
 
   useEffect(() => {
     let cancelled = false;
     setSlotsLoading(true);
     setTimeSlot("");
+    setError("");
     api<SlotsResponse>(`/api/doctors/${doctor.id}/slots?date=${date}`)
-      .then((data) => !cancelled && setSlots(data))
-      .catch((e) => !cancelled && setError(errorMessage(e)))
-      .finally(() => !cancelled && setSlotsLoading(false));
+      .then((data) => {
+        if (cancelled) return;
+        if (autoPick.current && !data.slots.some((s) => s.available)) {
+          const next = days.find((d) => d.works && d.iso > date);
+          if (next) {
+            setDate(next.iso);
+            return;
+          }
+        }
+        autoPick.current = false;
+        setSlots(data);
+        setSlotsLoading(false);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(errorMessage(e));
+        setSlotsLoading(false);
+      });
     return () => {
       cancelled = true;
     };
-  }, [doctor.id, date]);
+  }, [doctor.id, date, days]);
 
-  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!timeSlot) {
-      setError("Please pick a time slot");
-      return;
-    }
-    setError("");
+  const morning = slots?.slots.filter((s) => s.time < "12:00") ?? [];
+  const afternoon = slots?.slots.filter((s) => s.time >= "12:00") ?? [];
+  const freeCount = slots?.slots.filter((s) => s.available).length ?? 0;
+
+  const nameError = name.trim().length < 2 ? "Enter the patient's full name" : "";
+  const phoneError = !PHONE_RE.test(phone.trim())
+    ? "Enter a Nigerian number, like 08012345678 or +2348012345678"
+    : "";
+
+  const submit = async () => {
     setSubmitting(true);
+    setError("");
     try {
-      await onSubmit({ doctorId: doctor.id, patientName: name, phoneNumber, date, timeSlot, reason });
-    } catch (err) {
-      setError(errorMessage(err));
-      // Refresh slots in case someone else just took this one
-      api<SlotsResponse>(`/api/doctors/${doctor.id}/slots?date=${date}`).then(setSlots).catch(() => {});
+      const result = await dispatch(
+        bookAppointment({
+          doctorId: doctor.id,
+          patientName: name.trim(),
+          phoneNumber: phone.trim(),
+          date,
+          timeSlot,
+          reason: reason.trim(),
+        })
+      ).unwrap();
+      setBooked(result);
+    } catch (e) {
+      setError(String(e));
+      // The slot may have just been taken: refresh and send them back to pick again
+      if (/taken|passed/i.test(String(e))) {
+        loadSlots(date).catch(() => {});
+        setTimeSlot("");
+        setStep(0);
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
-  const availableCount = slots?.slots.filter((s) => s.available).length ?? 0;
+  if (booked) {
+    return (
+      <div className="booking-done">
+        <div className="notice notice-success" role="status">
+          <strong>You're booked.</strong> The clinic will confirm shortly. Show this card at the
+          front desk when you arrive.
+        </div>
+        <ClinicCard
+          doctorName={booked.doctorName}
+          speciality={booked.doctorSpeciality}
+          date={booked.date}
+          timeSlot={booked.timeSlot}
+          patientName={booked.patientName}
+          reason={booked.reason}
+          status={booked.status}
+        />
+        <div className="booking-done-links">
+          <button type="button" className="btn btn-primary" onClick={() => downloadCalendarFile(booked)}>
+            Add to calendar
+          </button>
+          <Link to="/appointments" className="btn btn-quiet" onClick={onClose}>
+            My appointments
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <form onSubmit={handleFormSubmit} className="appointment-form">
-      {error && <Alert variant="danger">{error}</Alert>}
-      <p className="text-muted small mb-2">
-        Consults on {doctor.workingDays.map((d) => DAY_NAMES[d]).join(", ")}
-        {doctor.consultationFee > 0 && ` · Fee ₦${doctor.consultationFee.toLocaleString()}`}
-      </p>
-      <div className="form-group">
-        <label htmlFor="name">Patient name:</label>
-        <input
-          type="text"
-          id="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          minLength={2}
-        />
+    <div>
+      <ol className="booking-steps">
+        {STEPS.map((label, i) => (
+          <li key={label} aria-current={i === step ? "step" : undefined} className={i < step ? "done" : ""}>
+            {label}
+          </li>
+        ))}
+      </ol>
+
+      <div className="booking-doctor">
+        <DoctorAvatar name={doctor.name} speciality={doctor.speciality} />
+        <div>
+          <p>
+            <strong>{doctor.name}</strong>
+          </p>
+          <p className="muted small">
+            {doctor.speciality}
+            {doctor.consultationFee > 0 && (
+              <>
+                , <span className="num">{formatFee(doctor.consultationFee)}</span> consultation
+              </>
+            )}
+          </p>
+        </div>
       </div>
-      <div className="form-group">
-        <label htmlFor="phoneNumber">Phone number:</label>
-        <input
-          type="tel"
-          id="phoneNumber"
-          value={phoneNumber}
-          onChange={(e) => setPhoneNumber(e.target.value)}
-          placeholder="08012345678"
-          pattern="(\+234\d{10}|0\d{10})"
-          title="Nigerian number, e.g. 08012345678 or +2348012345678"
-          required
-        />
-      </div>
-      <div className="form-group">
-        <label htmlFor="date">Date:</label>
-        <input
-          type="date"
-          id="date"
-          value={date}
-          min={toDateInput(today)}
-          max={toDateInput(maxDate)}
-          onChange={(e) => setDate(e.target.value)}
-          required
-        />
-      </div>
-      <div className="form-group">
-        <label>Time:</label>
-        {slotsLoading ? (
-          <Spinner animation="border" size="sm" />
-        ) : slots && !slots.worksThisDay ? (
-          <p className="text-danger small">The doctor doesn't consult on this day. Pick another date.</p>
-        ) : slots && availableCount === 0 ? (
-          <p className="text-danger small">No free slots left on this day. Pick another date.</p>
-        ) : (
-          <div className="d-flex flex-wrap gap-2">
-            {slots?.slots.map((s) => (
+
+      {error && (
+        <div className="notice notice-error" role="alert">
+          {error}
+        </div>
+      )}
+
+      {step === 0 && (
+        <>
+          <span className="booking-label" id="date-label">
+            Choose a day
+          </span>
+          <div className="date-strip" role="group" aria-labelledby="date-label">
+            {days.map((d) => (
               <button
+                key={d.iso}
                 type="button"
-                key={s.time}
-                disabled={!s.available}
-                onClick={() => setTimeSlot(s.time)}
-                className={`btn btn-sm ${timeSlot === s.time ? "btn-primary" : "btn-outline-primary"}`}
-                style={{ minWidth: 80 }}
+                className="date-chip"
+                disabled={!d.works}
+                aria-pressed={date === d.iso}
+                aria-label={`${formatLongDate(d.iso)}${d.works ? "" : ", doctor not in"}`}
+                onClick={() => {
+                  autoPick.current = false;
+                  setDate(d.iso);
+                }}
               >
-                {formatTime(s.time)}
+                <span>{d.weekday}</span>
+                <strong>{d.day}</strong>
               </button>
             ))}
           </div>
-        )}
-      </div>
-      <div className="form-group">
-        <label htmlFor="reason">Reason for visit (optional):</label>
-        <input
-          type="text"
-          id="reason"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          maxLength={300}
-          placeholder="e.g. Toothache, routine check-up"
-        />
-      </div>
-      <button type="submit" disabled={submitting || !timeSlot}>
-        {submitting ? "Booking..." : "Book Now"}
-      </button>
-    </form>
-  );
-};
 
-export default AppointmentFormIC;
+          <span className="booking-label">Choose a time on {formatLongDate(date)}</span>
+          {slotsLoading ? (
+            <div className="spinner" role="status" aria-label="Loading times" />
+          ) : freeCount === 0 ? (
+            <p className="notice notice-info">Every time on this day is taken. Try another day.</p>
+          ) : (
+            [
+              ["Morning", morning],
+              ["Afternoon", afternoon],
+            ].map(([label, list]) =>
+              (list as SlotsResponse["slots"]).length ? (
+                <div className="slot-group" key={label as string}>
+                  <h3>{label as string}</h3>
+                  <div className="slot-grid">
+                    {(list as SlotsResponse["slots"]).map((s) => (
+                      <button
+                        key={s.time}
+                        type="button"
+                        className="slot"
+                        disabled={!s.available}
+                        aria-pressed={timeSlot === s.time}
+                        aria-label={`${formatTime(s.time)}${s.available ? "" : ", taken"}`}
+                        onClick={() => setTimeSlot(s.time)}
+                      >
+                        {formatTime(s.time)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null
+            )
+          )}
+
+          <div className="booking-actions">
+            <button type="button" className="btn btn-primary" disabled={!timeSlot} onClick={() => setStep(1)}>
+              {timeSlot ? `Continue with ${formatTime(timeSlot)}` : "Pick a time to continue"}
+            </button>
+          </div>
+        </>
+      )}
+
+      {step === 1 && (
+        <form
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            setTouched(true);
+            if (!nameError && !phoneError) setStep(2);
+          }}
+        >
+          <div className="field">
+            <label htmlFor="bk-name">Patient's name</label>
+            <span className="hint">Booking for someone else? Put their name here.</span>
+            <input
+              id="bk-name"
+              className="input"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              aria-invalid={touched && !!nameError}
+              aria-describedby={touched && nameError ? "bk-name-err" : undefined}
+            />
+            {touched && nameError && (
+              <span className="field-error" id="bk-name-err">
+                {nameError}
+              </span>
+            )}
+          </div>
+          <div className="field">
+            <label htmlFor="bk-phone">Phone number</label>
+            <span className="hint">The clinic will call this number if anything changes.</span>
+            <input
+              id="bk-phone"
+              className="input"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              aria-invalid={touched && !!phoneError}
+              aria-describedby={touched && phoneError ? "bk-phone-err" : undefined}
+            />
+            {touched && phoneError && (
+              <span className="field-error" id="bk-phone-err">
+                {phoneError}
+              </span>
+            )}
+          </div>
+          <div className="field">
+            <label htmlFor="bk-reason">Reason for the visit (optional)</label>
+            <span className="hint">A few words help the doctor prepare.</span>
+            <input
+              id="bk-reason"
+              className="input"
+              maxLength={300}
+              placeholder="e.g. toothache, routine check-up"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </div>
+          <div className="booking-actions">
+            <button type="button" className="btn btn-quiet" onClick={() => setStep(0)}>
+              Back
+            </button>
+            <button type="submit" className="btn btn-primary">
+              Continue
+            </button>
+          </div>
+        </form>
+      )}
+
+      {step === 2 && (
+        <>
+          <dl className="booking-summary">
+            <div>
+              <dt>Day</dt>
+              <dd>{formatLongDate(date)}</dd>
+            </div>
+            <div>
+              <dt>Time</dt>
+              <dd>{formatTime(timeSlot)}</dd>
+            </div>
+            <div>
+              <dt>Patient</dt>
+              <dd>{name.trim()}</dd>
+            </div>
+            <div>
+              <dt>Phone</dt>
+              <dd>{phone.trim()}</dd>
+            </div>
+            <div>
+              <dt>Reason</dt>
+              <dd>{reason.trim() || "Consultation"}</dd>
+            </div>
+            {doctor.consultationFee > 0 && (
+              <div>
+                <dt>Fee, paid at the clinic</dt>
+                <dd>{formatFee(doctor.consultationFee)}</dd>
+              </div>
+            )}
+          </dl>
+          <p className="muted small">You can cancel from My appointments any time before your visit.</p>
+          <div className="booking-actions">
+            <button type="button" className="btn btn-quiet" onClick={() => setStep(1)} disabled={submitting}>
+              Back
+            </button>
+            <button type="button" className="btn btn-primary" onClick={submit} disabled={submitting}>
+              {submitting ? "Booking…" : "Book appointment"}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

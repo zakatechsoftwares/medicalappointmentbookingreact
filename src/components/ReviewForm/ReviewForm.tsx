@@ -1,12 +1,7 @@
 import { useState } from "react";
-import Button from "react-bootstrap/Button";
-import FormGroup from "react-bootstrap/FormGroup";
-import FormLabel from "react-bootstrap/FormLabel";
-import FormControl from "react-bootstrap/FormControl";
-import Alert from "react-bootstrap/Alert";
-import { Rating } from "react-simple-star-rating";
 import { api, errorMessage } from "../../api";
 import { DoctorType, ReviewType } from "../../redux/DataType/DataType";
+import { StarInput } from "../../ui/Stars";
 
 interface Props {
   doctor: DoctorType;
@@ -17,21 +12,23 @@ interface Props {
 function ReviewForm({ doctor, existing, onSaved }: Props) {
   const [rating, setRating] = useState(existing?.rating ?? 0);
   const [comment, setComment] = useState(existing?.comment ?? "");
+  const [touched, setTouched] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const ratingError = !rating ? "Choose from 1 to 5 stars" : "";
+  const commentError = comment.trim().length < 3 ? "Write a few words about your visit" : "";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!rating) {
-      setError("Please choose a star rating");
-      return;
-    }
+    setTouched(true);
+    if (ratingError || commentError) return;
     setSaving(true);
     setError("");
     try {
       const review = await api<ReviewType>("/api/reviews", {
         method: "POST",
-        body: { doctorId: doctor.id, rating, comment },
+        body: { doctorId: doctor.id, rating, comment: comment.trim() },
       });
       onSaved(review);
     } catch (err) {
@@ -42,33 +39,37 @@ function ReviewForm({ doctor, existing, onSaved }: Props) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-3">
-      <FormLabel className="fs-4">
-        {existing ? "Update your review" : "Review"} {doctor.name}
-      </FormLabel>
-      {error && <Alert variant="danger">{error}</Alert>}
-      <FormGroup className="mb-3">
-        <FormLabel className="fw-bold">Rating:</FormLabel>
-        <div>
-          <Rating initialValue={rating} onClick={(value: number) => setRating(value)} size={28} />
+    <form onSubmit={handleSubmit} noValidate>
+      {error && (
+        <div className="notice notice-error" role="alert">
+          {error}
         </div>
-      </FormGroup>
-      <FormGroup className="mb-3" controlId="reviewComment">
-        <FormLabel className="fw-bold">Review:</FormLabel>
-        <FormControl
-          as="textarea"
-          rows={3}
-          placeholder="How was your consultation?"
+      )}
+      <div className="field">
+        <span className="booking-label" style={{ margin: 0 }}>
+          How was your visit with {doctor.name}?
+        </span>
+        <StarInput value={rating} onChange={setRating} />
+        {touched && ratingError && <span className="field-error">{ratingError}</span>}
+      </div>
+      <div className="field">
+        <label htmlFor="rv-comment">Your review</label>
+        <span className="hint">Other patients will see this with your name.</span>
+        <textarea
+          id="rv-comment"
+          className="input"
+          rows={4}
+          maxLength={1000}
+          placeholder="Was the wait short? Did the doctor explain things clearly?"
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          maxLength={1000}
-          required
-          minLength={3}
+          aria-invalid={touched && !!commentError}
         />
-      </FormGroup>
-      <Button type="submit" disabled={saving}>
-        {saving ? "Saving..." : "Submit review"}
-      </Button>
+        {touched && commentError && <span className="field-error">{commentError}</span>}
+      </div>
+      <button type="submit" className="btn btn-primary btn-block" disabled={saving}>
+        {saving ? "Saving…" : existing ? "Update review" : "Post review"}
+      </button>
     </form>
   );
 }

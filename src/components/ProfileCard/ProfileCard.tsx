@@ -1,166 +1,81 @@
 import { useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Container from "react-bootstrap/Container";
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
-import Button from "react-bootstrap/Button";
-import FormGroup from "react-bootstrap/FormGroup";
-import FormLabel from "react-bootstrap/FormLabel";
-import FormControl from "react-bootstrap/FormControl";
-import { Formik, Form, Field, ErrorMessage } from "formik";
-import * as yup from "yup";
-
 import { useAuth } from "../Routes/AuthHook";
 import { errorMessage } from "../../api";
+import { TextField } from "../Auth/AuthLayout";
 
-function ProfileCard({ onDone }: { onDone?: () => void }) {
-  const { user: userDetails, updateProfile } = useAuth();
-  const [editMode, setEditMode] = useState(false);
+const PHONE_RE = /^(\+234\d{10}|0\d{10})$/;
+
+/** The patient's own details. Email can't be changed here because it's the login. */
+function ProfileCard() {
+  const { user, updateProfile } = useAuth();
+  const [name, setName] = useState(user?.name ?? "");
+  const [phone, setPhone] = useState(user?.phone ?? "");
+  const [touched, setTouched] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
 
-  const schema = yup.object().shape({
-    name: yup
-      .string()
-      .required()
-      .min(4, "String must be at least 4 characters"),
-    email: yup
-      .string()
+  if (!user) return null;
 
-      .email()
-      .required(),
+  const nameError = name.trim().length < 4 ? "Enter your full name (at least 4 letters)" : "";
+  const phoneError = !PHONE_RE.test(phone.trim()) ? "Enter a Nigerian number, like 08012345678" : "";
+  const changed = name.trim() !== user.name || phone.trim() !== user.phone;
 
-    phone: yup
-      .string()
-      .required()
-      .matches(/^(\+234\d{10}|0\d{10})$/, "Enter a valid Nigerian phone number, e.g. 08012345678"),
-  });
-  interface valueType {
-    name: string;
-    email: string;
-    phone: string;
-  }
-  const initialValues: valueType = {
-    name: userDetails?.name || "",
-    email: userDetails?.email || "",
-    phone: userDetails?.phone || "",
-  };
-  const handleEdit = () => {
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTouched(true);
     setSaved(false);
-    setEditMode(!editMode);
-  };
-
-  const handleSubmit = async (values: valueType) => {
+    if (nameError || phoneError) return;
+    setBusy(true);
     setError("");
     try {
-      await updateProfile({ name: values.name, phone: values.phone });
-      setEditMode(false);
+      await updateProfile({ name: name.trim(), phone: phone.trim() });
       setSaved(true);
-    } catch (e) {
-      setError(errorMessage(e));
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
     }
   };
 
-  if (!userDetails) return null;
-
   return (
-    <Container fluid>
-      <Row>
-        <Col>
-          <div className="signup-grid">
-            <div className="signup-text">
-              <h1>Profile</h1>
-            </div>
+    <div className="page page-narrow">
+      <div className="page-head">
+        <h1>Your details</h1>
+        <p>These fill in automatically when you book.</p>
+      </div>
+      <form className="panel panel-pad" onSubmit={submit} noValidate style={{ maxWidth: "34rem" }}>
+        {error && (
+          <div className="notice notice-error" role="alert">
+            {error}
           </div>
-
-          {error && <Alert variant="danger">{error}</Alert>}
-          {saved && <Alert variant="success">Profile updated successfully</Alert>}
-          {editMode ? (
-            <Formik
-              validationSchema={schema}
-              onSubmit={handleSubmit}
-              initialValues={initialValues}
-              enableReinitialize
-            >
-              {() => {
-                return (
-                  <Form>
-                    <FormLabel>Edit profile</FormLabel>
-                    <FormGroup className="mb-3" controlId="formBasicName">
-                      <FormLabel className="fw-bold">Name</FormLabel>
-                      <Field
-                        as={FormControl}
-                        type="text"
-                        placeholder="Enter your name"
-                        style={{ width: "100%" }}
-                        name="name"
-                        // onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                        //   formik.setFieldValue("name", e.target.value);
-                        // }}
-                      />
-                      <ErrorMessage name="name" />
-                    </FormGroup>
-                    <FormGroup className="mb-3" controlId="formBasicPhone">
-                      <FormLabel className="fw-bold">Phone number</FormLabel>
-                      <Field
-                        as={FormControl}
-                        name="phone"
-                        type="tel"
-                        placeholder="Enter your phone number"
-                        style={{ width: "100%" }}
-                      />
-                      <ErrorMessage name="phone" />
-                    </FormGroup>
-                    <FormGroup className="mb-3" controlId="formBasicEmail">
-                      <FormLabel className="fw-bold">Email address</FormLabel>
-                      <Field
-                        disabled
-                        as={FormControl}
-                        name="email"
-                        type="email"
-                        placeholder="Enter your email"
-                        style={{ width: "100%" }}
-                      />
-                      <ErrorMessage name="email" />
-                    </FormGroup>
-
-                    <Button variant="primary" type="submit">
-                      Save changes
-                    </Button>{" "}
-                    <Button variant="secondary" type="button" onClick={handleEdit}>
-                      Cancel
-                    </Button>
-                    {/* <Button
-                      variant="danger"
-                      type="button"
-                      onClick={() => handleReset()}
-                    >
-                      Reset
-                    </Button>{" "} */}
-                  </Form>
-                );
-              }}
-            </Formik>
-          ) : (
-            <div className="profile-details">
-              <h3>Welcome, {userDetails?.name}</h3>
-              <p>
-                <strong>Name:</strong> {userDetails?.name} <br />
-                <strong>Email:</strong> {userDetails?.email} <br />
-                <strong>Phone number:</strong> {userDetails?.phone} <br />
-              </p>
-
-              <Button onClick={handleEdit}>Edit</Button>{" "}
-              {onDone && (
-                <Button variant="secondary" onClick={onDone}>
-                  Close
-                </Button>
-              )}
-            </div>
-          )}
-        </Col>
-      </Row>
-    </Container>
+        )}
+        {saved && (
+          <div className="notice notice-success" role="status">
+            Details saved.
+          </div>
+        )}
+        <TextField id="pf-name" label="Full name" autoComplete="name" value={name} onChange={setName} error={touched ? nameError : ""} />
+        <TextField
+          id="pf-phone"
+          label="Phone number"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          value={phone}
+          onChange={setPhone}
+          error={touched ? phoneError : ""}
+        />
+        <div className="field">
+          <label htmlFor="pf-email">Email</label>
+          <span className="hint">You log in with this, so it can't be changed here.</span>
+          <input id="pf-email" className="input" value={user.email} readOnly disabled />
+        </div>
+        <button type="submit" className="btn btn-primary" disabled={busy || !changed}>
+          {busy ? "Saving…" : "Save details"}
+        </button>
+      </form>
+    </div>
   );
 }
 

@@ -1,24 +1,15 @@
 import { useEffect, useState } from "react";
-import "./FindDoctorSearchIC.css";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../../api";
+import { FALLBACK_SPECIALITIES } from "../../utils/specialities";
 
-// Used until the list loads from the server (or if it can't be reached)
-const FALLBACK_SPECIALITIES = [
-  "Dentist",
-  "Gynecologist/obstetrician",
-  "General Physician",
-  "Dermatologist",
-  "Ear-nose-throat (ent) Specialist",
-  "Paediatrician",
-];
 
+/** Search box plus speciality chips. Both live in the URL so results can be shared or refreshed. */
 const FindDoctorSearchIC = () => {
-  const [doctorResultHidden, setDoctorResultHidden] = useState(true);
-  const [searchParams] = useSearchParams();
-  const [searchDoctor, setSearchDoctor] = useState(searchParams.get("speciality") ?? "");
+  const [params, setParams] = useSearchParams();
+  const speciality = params.get("speciality") ?? "";
+  const [query, setQuery] = useState(params.get("search") ?? "");
   const [specialities, setSpecialities] = useState<string[]>(FALLBACK_SPECIALITIES);
-  const navigate = useNavigate();
 
   useEffect(() => {
     api<string[]>("/api/doctors/specialities")
@@ -26,80 +17,64 @@ const FindDoctorSearchIC = () => {
       .catch(() => {});
   }, []);
 
-  // Filter the dropdown as the user types
-  const matches = specialities.filter((s) =>
-    s.toLowerCase().includes(searchDoctor.trim().toLowerCase())
-  );
-  const handleDoctorSelect = (speciality: string) => {
-    setSearchDoctor(speciality);
-    setDoctorResultHidden(true);
-    navigate(`/instant-consultation?speciality=${encodeURIComponent(speciality)}`);
+  // Keep the box in step if the URL changes (e.g. back button)
+  useEffect(() => setQuery(params.get("search") ?? ""), [params]);
+
+  const update = (next: { speciality?: string; search?: string }) => {
+    const p = new URLSearchParams();
+    const s = next.speciality ?? speciality;
+    const q = (next.search ?? query).trim();
+    if (s) p.set("speciality", s);
+    if (q) p.set("search", q);
+    setParams(p);
   };
+
   return (
-    <div className="finddoctor z-0">
-      <center>
-        <h1>Find a doctor and Consult instantly</h1>
-        <div>
-          {" "}
-          <i
-            style={{ color: "#000000", fontSize: "20rem" }}
-            className="fa fa-user-md"
-          ></i>
-        </div>{" "}
-        <div
-          className="home-search-container"
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <div className="doctor-search-box z-0">
-            {/* <p>Perform a search to see the results.</p> */}
+    <div className="finder">
+      <form
+        className="finder-search"
+        role="search"
+        onSubmit={(e) => {
+          e.preventDefault();
+          update({ search: query });
+        }}
+      >
+        <label htmlFor="finder-q" className="visually-hidden">
+          Search doctors by name or speciality
+        </label>
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" className="finder-icon">
+          <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path d="M20 20l-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+        <input
+          id="finder-q"
+          className="input"
+          type="search"
+          placeholder="Doctor's name or speciality"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <button type="submit" className="btn btn-primary">
+          Search
+        </button>
+      </form>
 
-            <input
-              type="text"
-              className="search-doctor-input-box "
-              placeholder="Search by speciality, e.g. Dentist"
-              onFocus={() => setDoctorResultHidden(false)}
-              onBlur={() => setDoctorResultHidden(true)}
-              value={searchDoctor}
-              onChange={(e) => setSearchDoctor(e.target.value)}
-            />
-
-            <div className="findiconimg">
-              <img
-                className="findIcon"
-                src={"/images/search.svg"}
-                alt=""
-              />
-            </div>
-            <div
-              className="search-doctor-input-results"
-              hidden={doctorResultHidden}
-            >
-              {(matches.length ? matches : specialities).map((speciality) => (
-                <div
-                  className="search-doctor-result-item z-0"
-                  key={speciality}
-                  onMouseDown={() => handleDoctorSelect(speciality)}
-                >
-                  <span>
-                    <img
-                      src={"/images/search.svg"}
-                      alt=""
-                      style={{ height: "10px", width: "10px" }}
-                      width="12"
-                    />
-                  </span>
-                  <span>{speciality}</span>
-                  <span>SPECIALITY</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </center>
+      <div className="chip-row chip-row-scroll" aria-label="Filter by speciality">
+        <button type="button" className="chip" aria-pressed={!speciality} onClick={() => update({ speciality: "" })}>
+          All doctors
+        </button>
+        {specialities.map((s) => (
+          <button
+            key={s}
+            type="button"
+            className="chip"
+            aria-pressed={speciality.toLowerCase() === s.toLowerCase()}
+            onClick={() => update({ speciality: s })}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
